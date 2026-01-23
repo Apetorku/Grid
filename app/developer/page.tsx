@@ -59,7 +59,7 @@ export default function DeveloperDashboard() {
             ['completed', 'delivered'].includes(p.status)
           ).length,
           total_earnings: allProjects
-            .filter((p: any) => p.status === 'delivered')
+            .filter((p: any) => ['in_progress', 'completed', 'delivered'].includes(p.status))
             .reduce((sum: number, p: any) => sum + (p.final_cost || 0), 0),
         })
       }

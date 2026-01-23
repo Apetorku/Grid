@@ -8,7 +8,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
-import { Bell, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
+import { NotificationDropdown } from '@/components/NotificationDropdown'
 
 interface DeveloperLayoutProps {
   children: React.ReactNode
@@ -67,9 +68,7 @@ export default function DeveloperLayout({ children }: DeveloperLayoutProps) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <NotificationDropdown userRole="developer" />
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarImage src={user?.avatar_url} />

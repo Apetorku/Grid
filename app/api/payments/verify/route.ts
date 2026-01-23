@@ -75,24 +75,30 @@ export async function GET(request: NextRequest) {
 
       // Create notification for developer
       if (existingPayment.developer_id) {
-        await supabase.from('notifications').insert({
+        const { error: devNotifError } = await supabase.from('notifications').insert({
           user_id: existingPayment.developer_id,
           title: 'New Project Payment Received',
           message: 'A client has paid for a project. You can now start working on it.',
           type: 'success',
           link: `/developer/projects/${projectId}`,
         } as any)
+        if (devNotifError) {
+          console.error('Failed to create developer notification:', devNotifError)
+        }
       }
 
       // Create notification for client
       if (existingPayment.client_id) {
-        await supabase.from('notifications').insert({
+        const { error: clientNotifError } = await supabase.from('notifications').insert({
           user_id: existingPayment.client_id,
           title: 'Payment Successful',
           message: 'Your payment has been secured in escrow. The developer will start working on your project.',
           type: 'success',
           link: `/client/projects/${projectId}`,
         } as any)
+        if (clientNotifError) {
+          console.error('Failed to create client notification:', clientNotifError)
+        }
       }
     }
 

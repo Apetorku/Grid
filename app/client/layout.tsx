@@ -8,7 +8,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
-import { Bell, Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut } from 'lucide-react'
+import { NotificationDropdown } from '@/components/NotificationDropdown'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -71,9 +72,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <NotificationDropdown userRole="client" />
             <Link href="/client/profile">
               <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
                 <Avatar>

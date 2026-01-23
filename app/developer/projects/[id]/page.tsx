@@ -118,13 +118,17 @@ export default function DeveloperProjectPage() {
     console.log('Project accepted successfully:', data)
 
     // Create notification for client
-    await supabase.from('notifications').insert({
+    const { error: notifError } = await supabase.from('notifications').insert({
       user_id: project.client_id,
       title: 'Project Accepted',
       message: `Your project "${project.title}" has been accepted. Final cost: ${finalCost} GHS. Please proceed with payment.`,
       type: 'success',
       link: `/client/projects/${project.id}`,
     } as any)
+    
+    if (notifError) {
+      console.error('Failed to create notification:', notifError)
+    }
 
     toast.success('Project accepted! Waiting for client payment.')
     fetchProject()
