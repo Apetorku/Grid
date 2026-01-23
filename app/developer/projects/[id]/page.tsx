@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Project, Message } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getStatusColor, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Send, Upload, Video, Paperclip, Smile, Loader2, ArrowLeft } from 'lucide-react'
@@ -20,6 +21,7 @@ import EmojiPicker from 'emoji-picker-react'
 export default function DeveloperProjectPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -32,6 +34,7 @@ export default function DeveloperProjectPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview')
   const supabase = createClient()
 
   useEffect(() => {
@@ -44,6 +47,13 @@ export default function DeveloperProjectPage() {
     }
     init()
   }, [params.id])
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   const fetchProject = async () => {
     if (!params.id || Array.isArray(params.id)) return
@@ -282,7 +292,8 @@ export default function DeveloperProjectPage() {
   }
 
   return (
-    <div className="space-y-6">      {/* Back Button */}
+    <div className="space-y-6">
+      {/* Back Button */}
       <Button 
         variant="ghost" 
         onClick={() => router.back()}
@@ -291,7 +302,9 @@ export default function DeveloperProjectPage() {
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
       </Button>
-            <div className="flex items-center justify-between">
+      
+      {/* Project Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{project.title}</h1>
           <p className="text-muted-foreground">
@@ -303,7 +316,17 @@ export default function DeveloperProjectPage() {
         </Badge>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Tabbed Interface */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="communication">Communication</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {/* Project Details */}
           <Card>
@@ -420,13 +443,65 @@ export default function DeveloperProjectPage() {
             </Card>
           )}
 
-          {/* Messages */}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Estimated Cost</p>
+                    <p className="text-lg font-bold">
+                      {formatCurrency(project.estimated_cost || 0)}
+                    </p>
+                  </div>
+                  {project.final_cost && (
+                    <div>
+                      <p className="text-muted-foreground">Final Cost</p>
+                      <p className="text-lg font-bold text-primary">
+                        {formatCurrency(project.final_cost)}
+                      </p>
+                    </div>
+                  )}
+                  {project.estimated_duration && (
+                    <div>
+                      <p className="text-muted-foreground">Duration</p>
+                      <p className="font-medium">{project.estimated_duration} days</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-muted-foreground">Created</p>
+                    <p className="font-medium">{formatDate(project.created_at)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button variant="outline" className="w-full">
+                    <Video className="mr-2 h-4 w-4" />
+                    Start Meeting
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Communication Tab */}
+        <TabsContent value="communication" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Communication</CardTitle>
+              <CardTitle>Messages</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto mb-4 p-4 bg-muted/30 rounded-lg">
+              <div className="space-y-3 max-h-[600px] overflow-y-auto mb-4 p-4 bg-muted/30 rounded-lg">
                 {messages.length === 0 ? (
                   <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Start the conversation!</p>
                 ) : (
@@ -559,55 +634,53 @@ export default function DeveloperProjectPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
+        {/* Files Tab */}
+        <TabsContent value="files" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Project Info</CardTitle>
+              <CardTitle>Project Deliverables</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Estimated Cost</p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(project.estimated_cost || 0)}
+            <CardContent className="space-y-4">
+              {project.repository_url || project.hosting_url ? (
+                <>
+                  {project.repository_url && (
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Repository URL</p>
+                      <a
+                        href={project.repository_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline break-all"
+                      >
+                        {project.repository_url}
+                      </a>
+                    </div>
+                  )}
+                  {project.hosting_url && (
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Live Website URL</p>
+                      <a
+                        href={project.hosting_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline break-all"
+                      >
+                        {project.hosting_url}
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No deliverables uploaded yet.
                 </p>
-              </div>
-              {project.final_cost && (
-                <div>
-                  <p className="text-muted-foreground">Final Cost</p>
-                  <p className="text-lg font-bold text-primary">
-                    {formatCurrency(project.final_cost)}
-                  </p>
-                </div>
               )}
-              {project.estimated_duration && (
-                <div>
-                  <p className="text-muted-foreground">Duration</p>
-                  <p className="font-medium">{project.estimated_duration} days</p>
-                </div>
-              )}
-              <div>
-                <p className="text-muted-foreground">Created</p>
-                <p className="font-medium">{formatDate(project.created_at)}</p>
-              </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full">
-                <Video className="mr-2 h-4 w-4" />
-                Start Meeting
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

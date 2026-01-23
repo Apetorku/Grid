@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Project, Message } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDate, getStatusColor, getInitials, formatCurrency } from '@/lib/utils'
 import { generateInvoice, generateReceipt, generateContract } from '@/lib/pdfGenerator'
@@ -19,6 +20,7 @@ import dynamic from 'next/dynamic'
 export default function ProjectDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -35,6 +37,7 @@ export default function ProjectDetailsPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
   const supabase = createClient()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview')
 
   useEffect(() => {
     const init = async () => {
@@ -75,6 +78,14 @@ export default function ProjectDetailsPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    // Set active tab from URL parameter
+    const tab = searchParams.get('tab')
+    if (tab) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   const fetchProject = async () => {    if (!params.id || Array.isArray(params.id)) return
         const { data, error } = await supabase
@@ -419,54 +430,193 @@ export default function ProjectDetailsPage() {
         <p className="text-muted-foreground">{project.description}</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Project Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">Requirements</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {project.requirements}
-                </p>
-              </div>
-              {project.repository_url && (
-                <div>
-                  <h3 className="font-semibold mb-2">Repository</h3>
-                  <a
-                    href={project.repository_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    {project.repository_url}
-                  </a>
-                </div>
-              )}
-              {project.hosting_url && (
-                <div>
-                  <h3 className="font-semibold mb-2">Live Website</h3>
-                  <a
-                    href={project.hosting_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    {project.hosting_url}
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="communication">Communication</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+        </TabsList>
 
-          {/* Messages */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Main Content */}
+            <div className="md:col-span-2 space-y-6">
+              {/* Project Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Project Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Requirements</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {project.requirements}
+                    </p>
+                  </div>
+                  {project.repository_url && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Repository</h3>
+                      <a
+                        href={project.repository_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {project.repository_url}
+                      </a>
+                    </div>
+                  )}
+                  {project.hosting_url && (
+                    <div>
+                      <h3 className="font-semibold mb-2">Live Website</h3>
+                      <a
+                        href={project.hosting_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {project.hosting_url}
+                      </a>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Payment Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estimated Cost</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(project.estimated_cost || 0)}
+                    </p>
+                  </div>
+                  {project.final_cost && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Final Cost</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {formatCurrency(project.final_cost)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Show Pay Now button only if approved and not paid */}
+                  {project.status === 'approved' && (
+                    <Button 
+                      className="w-full" 
+                      onClick={handlePayment}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        'Pay Now'
+                      )}
+                    </Button>
+                  )}
+                  
+                  {/* Show payment status for in_progress, completed, delivered */}
+                  {['in_progress', 'completed', 'delivered'].includes(project.status) && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">✓ Payment Secured</p>
+                      <p className="text-xs text-green-600 mt-1">
+                        Funds are held in escrow until project completion
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Show accept delivery button when completed */}
+                  {project.status === 'completed' && (
+                    <Button 
+                      className="w-full" 
+                      onClick={acceptDelivery}
+                      disabled={acceptingDelivery}
+                    >
+                      {acceptingDelivery ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Accept & Release Payment
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {/* Show delivered status */}
+                  {project.status === 'delivered' && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-800">✓ Project Delivered</p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Payment has been released to developer
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button variant="outline" className="w-full">
+                    <Video className="mr-2 h-4 w-4" />
+                    Start Meeting
+                  </Button>
+                  <Button variant="outline" className="w-full">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Files
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Timeline */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Timeline</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Created</p>
+                    <p className="font-medium">{formatDate(project.created_at)}</p>
+                  </div>
+                  {project.started_at && (
+                    <div>
+                      <p className="text-muted-foreground">Started</p>
+                      <p className="font-medium">{formatDate(project.started_at)}</p>
+                    </div>
+                  )}
+                  {project.estimated_duration && (
+                    <div>
+                      <p className="text-muted-foreground">Duration</p>
+                      <p className="font-medium">{project.estimated_duration} days</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="communication" className="space-y-6">
+          {/* Messages Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Communication</CardTitle>
+              <CardTitle>Messages</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto mb-4 p-4 bg-muted/30 rounded-lg">
@@ -621,84 +771,42 @@ export default function ProjectDetailsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Payment Info */}
+        <TabsContent value="files" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Payment</CardTitle>
+              <CardTitle>Project Documents</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Estimated Cost</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(project.estimated_cost || 0)}
+            <CardContent className="space-y-3">
+              {project.status === 'pending_review' ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Documents will be available once the project is accepted by a developer.
                 </p>
-              </div>
-              {project.final_cost && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Final Cost</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatCurrency(project.final_cost)}
-                  </p>
-                </div>
-              )}
-              
-              {/* Show Pay Now button only if approved and not paid */}
-              {project.status === 'approved' && (
-                <Button 
-                  className="w-full" 
-                  onClick={handlePayment}
-                  disabled={paymentLoading}
-                >
-                  {paymentLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Pay Now'
-                  )}
-                </Button>
-              )}
-              
-              {/* Show payment status for in_progress, completed, delivered */}
-              {['in_progress', 'completed', 'delivered'].includes(project.status) && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-medium text-green-800">✓ Payment Secured</p>
-                  <p className="text-xs text-green-600 mt-1">
-                    Funds are held in escrow until project completion
-                  </p>
-                </div>
-              )}
-              
-              {/* Documents Section */}
-              {project.status !== 'pending_review' && (
-                <div className="border-t pt-4 space-y-2">
-                  <h3 className="font-semibold text-sm mb-3">Documents</h3>
-                  
+              ) : (
+                <>
                   {/* Contract - Available after developer accepts */}
                   {['approved', 'in_progress', 'completed', 'delivered'].includes(project.status) && (
                     <Button 
                       variant="outline" 
-                      size="sm" 
-                      className="w-full justify-start"
+                      size="lg" 
+                      className="w-full justify-start h-auto py-4"
                       onClick={downloadContract}
                       disabled={downloadingDoc === 'contract'}
                     >
-                      {downloadingDoc === 'contract' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <FileSignature className="h-4 w-4 mr-2" />
-                          Download Contract
-                        </>
-                      )}
+                      <div className="flex items-start gap-3 w-full">
+                        {downloadingDoc === 'contract' ? (
+                          <Loader2 className="h-5 w-5 mt-0.5 animate-spin flex-shrink-0" />
+                        ) : (
+                          <FileSignature className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold">Project Contract</p>
+                          <p className="text-xs text-muted-foreground">
+                            Legal agreement between you and the developer
+                          </p>
+                        </div>
+                      </div>
                     </Button>
                   )}
                   
@@ -706,22 +814,24 @@ export default function ProjectDetailsPage() {
                   {['approved', 'in_progress', 'completed', 'delivered'].includes(project.status) && (
                     <Button 
                       variant="outline" 
-                      size="sm" 
-                      className="w-full justify-start"
+                      size="lg" 
+                      className="w-full justify-start h-auto py-4"
                       onClick={downloadInvoice}
                       disabled={downloadingDoc === 'invoice'}
                     >
-                      {downloadingDoc === 'invoice' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Download Invoice
-                        </>
-                      )}
+                      <div className="flex items-start gap-3 w-full">
+                        {downloadingDoc === 'invoice' ? (
+                          <Loader2 className="h-5 w-5 mt-0.5 animate-spin flex-shrink-0" />
+                        ) : (
+                          <FileText className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold">Invoice</p>
+                          <p className="text-xs text-muted-foreground">
+                            Payment invoice for this project
+                          </p>
+                        </div>
+                      </div>
                     </Button>
                   )}
                   
@@ -729,103 +839,32 @@ export default function ProjectDetailsPage() {
                   {['in_progress', 'completed', 'delivered'].includes(project.status) && (
                     <Button 
                       variant="outline" 
-                      size="sm" 
-                      className="w-full justify-start"
+                      size="lg" 
+                      className="w-full justify-start h-auto py-4"
                       onClick={downloadReceipt}
                       disabled={downloadingDoc === 'receipt'}
                     >
-                      {downloadingDoc === 'receipt' ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Downloading...
-                        </>
-                      ) : (
-                        <>
-                          <Receipt className="h-4 w-4 mr-2" />
-                          Download Receipt
-                        </>
-                      )}
+                      <div className="flex items-start gap-3 w-full">
+                        {downloadingDoc === 'receipt' ? (
+                          <Loader2 className="h-5 w-5 mt-0.5 animate-spin flex-shrink-0" />
+                        ) : (
+                          <Receipt className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold">Payment Receipt</p>
+                          <p className="text-xs text-muted-foreground">
+                            Proof of payment for your records
+                          </p>
+                        </div>
+                      </div>
                     </Button>
                   )}
-                </div>
-              )}
-              
-              {/* Show accept delivery button when completed */}
-              {project.status === 'completed' && (
-                <Button 
-                  className="w-full" 
-                  onClick={acceptDelivery}
-                  disabled={acceptingDelivery}
-                >
-                  {acceptingDelivery ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Accept & Release Payment
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {/* Show delivered status */}
-              {project.status === 'delivered' && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800">✓ Project Delivered</p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Payment has been released to developer
-                  </p>
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
-
-          {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full">
-                <Video className="mr-2 h-4 w-4" />
-                Start Meeting
-              </Button>
-              <Button variant="outline" className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                Download Files
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div>
-                <p className="text-muted-foreground">Created</p>
-                <p className="font-medium">{formatDate(project.created_at)}</p>
-              </div>
-              {project.started_at && (
-                <div>
-                  <p className="text-muted-foreground">Started</p>
-                  <p className="font-medium">{formatDate(project.started_at)}</p>
-                </div>
-              )}
-              {project.estimated_duration && (
-                <div>
-                  <p className="text-muted-foreground">Duration</p>
-                  <p className="font-medium">{project.estimated_duration} days</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

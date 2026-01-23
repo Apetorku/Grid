@@ -1,15 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@/types'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
-import { Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut, Home, FolderKanban, Plus, User as UserIcon, Bell, X, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { NotificationDropdown } from '@/components/NotificationDropdown'
+import { cn } from '@/lib/utils'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -18,7 +19,9 @@ interface ClientLayoutProps {
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
 
   useEffect(() => {
@@ -42,6 +45,17 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     router.push('/login')
   }
 
+  const navItems = [
+    { href: '/client', icon: Home, label: 'Dashboard' },
+    { href: '/client/projects', icon: FolderKanban, label: 'My Projects' },
+    { href: '/client/new-project', icon: Plus, label: 'New Project' },
+    { href: '/client/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/client/notifications', icon: Bell, label: 'Notifications' },
+    { href: '/client/profile', icon: UserIcon, label: 'Profile' },
+  ]
+
+  const isActive = (path: string) => pathname === path
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -52,49 +66,133 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/client" className="text-2xl font-bold text-primary">
+      {/* Top Header */}
+      <header className="border-b bg-card fixed top-0 left-0 right-0 z-40">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <Link href="/client" className="text-xl font-bold text-primary">
               GridNexus
             </Link>
-            <nav className="hidden md:flex items-center gap-4">
-              <Link href="/client">
-                <Button variant="ghost">Dashboard</Button>
-              </Link>
-              <Link href="/client/projects">
-                <Button variant="ghost">My Projects</Button>
-              </Link>
-              <Link href="/client/new-project">
-                <Button variant="ghost">New Project</Button>
-              </Link>
-            </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <NotificationDropdown userRole="client" />
             <Link href="/client/profile">
-              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                <Avatar>
-                  <AvatarImage src={user?.avatar_url} />
-                  <AvatarFallback>{getInitials(user?.full_name || '')}</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium">{user?.full_name}</p>
-                  <p className="text-xs text-muted-foreground">Client</p>
-                </div>
-              </div>
+              <Avatar className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarImage src={user?.avatar_url} />
+                <AvatarFallback className="text-xs">{getInitials(user?.full_name || '')}</AvatarFallback>
+              </Avatar>
             </Link>
             <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="bg-card w-64 h-full p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold">Menu</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <nav className="space-y-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                    isActive(item.href)
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-6 pt-6 border-t">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user?.avatar_url} />
+                  <AvatarFallback>{getInitials(user?.full_name || '')}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.full_name}</p>
+                  <p className="text-xs text-muted-foreground">Client</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside
+        className="fixed left-0 top-14 bottom-0 bg-card border-r w-64 z-30 hidden md:block"
+      >
+        <div className="p-4 h-full flex flex-col">
+          <nav className="space-y-1 flex-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+                  isActive(item.href)
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="pt-4 border-t mt-4">
+            <div className="flex items-center gap-3 px-3 py-2">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user?.avatar_url} />
+                <AvatarFallback>{getInitials(user?.full_name || '')}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.full_name}</p>
+                <p className="text-xs text-muted-foreground">Client</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {children}
+      <main className="pt-14 md:pl-64">
+        <div className="container mx-auto px-4 py-8">
+          {children}
+        </div>
       </main>
     </div>
   )
