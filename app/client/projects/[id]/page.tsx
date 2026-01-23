@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDate, getStatusColor, getInitials, formatCurrency } from '@/lib/utils'
 import { generateInvoice, generateReceipt, generateContract } from '@/lib/pdfGenerator'
 import { toast } from 'sonner'
-import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature, Paperclip, Smile, Loader2, Phone } from 'lucide-react'
+import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature, Paperclip, Smile, Loader2, Phone, ArrowLeft } from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
 import dynamic from 'next/dynamic'
 
@@ -398,6 +398,16 @@ export default function ProjectDetailsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <Button 
+        variant="ghost" 
+        onClick={() => router.back()}
+        className="mb-4"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
+      
       {/* Project Header */}
       <div>
         <div className="flex items-center justify-between mb-4">
