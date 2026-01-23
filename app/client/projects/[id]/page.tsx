@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils'
+import { generateInvoice, generateReceipt, generateContract } from '@/lib/pdfGenerator'
 import { toast } from 'sonner'
-import { Send, Download, Video, CheckCircle } from 'lucide-react'
+import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature } from 'lucide-react'
 
 export default function ProjectDetailsPage() {
   const params = useParams()
@@ -27,13 +28,19 @@ export default function ProjectDetailsPage() {
   }, [params.id])
 
   const fetchProject = async () => {    if (!params.id || Array.isArray(params.id)) return
-        const { data } = await supabase
+        const { data, error } = await supabase
       .from('projects')
-      .select('*, developer:developer_id(full_name)')
+      .select('*, developer:developer_id(full_name, email), client:client_id(full_name, email)')
       .eq('id', params.id)
       .single()
 
-    if (data) setProject(data)
+    if (error) {
+      console.error('Error fetching project:', error)
+    }
+    if (data) {
+      console.log('Project data loaded:', data)
+      setProject(data)
+    }
     setLoading(false)
   }
 
@@ -103,6 +110,98 @@ export default function ProjectDetailsPage() {
       toast.success('Project accepted! Payment released.')
       fetchProject()
     }
+  }
+
+  const downloadInvoice = async () => {
+    if (!project) {
+      toast.error('Project not loaded')
+      return
+    }
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Fetch client and developer separately
+    const [clientResult, developerResult] = await Promise.all([
+      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
+      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
+    ])
+
+    if (!clientResult.data || !developerResult.data) {
+      console.error('Failed to fetch user data:', { clientResult, developerResult })
+      toast.error('Could not load user information')
+      return
+    }
+    
+    generateInvoice(project as any, clientResult.data, developerResult.data)
+    toast.success('Invoice downloaded!')
+  }
+
+  const downloadReceipt = async () => {
+    if (!project) {
+      toast.error('Project not loaded')
+      return
+    }
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    
+    console.log('Fetching payment for project:', project.id)
+    
+    // Fetch payment data and user data
+    const [paymentResult, clientResult, developerResult] = await Promise.all([
+      supabase.from('payments').select('*').eq('project_id', project.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
+      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
+    ])
+
+    console.log('Full payment result:', JSON.stringify(paymentResult, null, 2))
+    console.log('Has error?', !!paymentResult.error)
+    console.log('Has data?', !!paymentResult.data)
+
+    if (paymentResult.error) {
+      console.error('Payment error details:', paymentResult.error)
+      toast.error(`Payment error: ${paymentResult.error.message || 'Unable to fetch payment data'}`)
+      return
+    }
+
+    if (!paymentResult.data) {
+      toast.error('No payment found for this project. Payment may not have been made yet.')
+      return
+    }
+
+    if (!clientResult.data || !developerResult.data) {
+      toast.error('Could not load user information')
+      return
+    }
+
+    generateReceipt(project as any, clientResult.data, developerResult.data, paymentResult.data as any)
+    toast.success('Receipt downloaded!')
+  }
+
+  const downloadContract = async () => {
+    if (!project) {
+      toast.error('Project not loaded')
+      return
+    }
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    
+    // Fetch client and developer separately
+    const [clientResult, developerResult] = await Promise.all([
+      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
+      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
+    ])
+
+    if (!clientResult.data || !developerResult.data) {
+      console.error('Failed to fetch user data:', { clientResult, developerResult })
+      toast.error('Could not load user information')
+      return
+    }
+    
+    generateContract(project as any, clientResult.data, developerResult.data)
+    toast.success('Contract downloaded!')
   }
 
   if (loading) {
@@ -245,6 +344,52 @@ export default function ProjectDetailsPage() {
                   <p className="text-xs text-green-600 mt-1">
                     Funds are held in escrow until project completion
                   </p>
+                </div>
+              )}
+              
+              {/* Documents Section */}
+              {project.status !== 'pending_review' && (
+                <div className="border-t pt-4 space-y-2">
+                  <h3 className="font-semibold text-sm mb-3">Documents</h3>
+                  
+                  {/* Contract - Available after developer accepts */}
+                  {['approved', 'in_progress', 'completed', 'delivered'].includes(project.status) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={downloadContract}
+                    >
+                      <FileSignature className="h-4 w-4 mr-2" />
+                      Download Contract
+                    </Button>
+                  )}
+                  
+                  {/* Invoice - Available after developer accepts */}
+                  {['approved', 'in_progress', 'completed', 'delivered'].includes(project.status) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={downloadInvoice}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download Invoice
+                    </Button>
+                  )}
+                  
+                  {/* Receipt - Available after payment */}
+                  {['in_progress', 'completed', 'delivered'].includes(project.status) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={downloadReceipt}
+                    >
+                      <Receipt className="h-4 w-4 mr-2" />
+                      Download Receipt
+                    </Button>
+                  )}
                 </div>
               )}
               
