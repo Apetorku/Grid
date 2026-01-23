@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Project, Message } from '@/types'
@@ -8,10 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { formatDate, getStatusColor, getInitials, formatCurrency } from '@/lib/utils'
 import { generateInvoice, generateReceipt, generateContract } from '@/lib/pdfGenerator'
 import { toast } from 'sonner'
-import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature } from 'lucide-react'
+import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature, Paperclip, Smile, Loader2, Phone } from 'lucide-react'
+import EmojiPicker from 'emoji-picker-react'
+import dynamic from 'next/dynamic'
 
 export default function ProjectDetailsPage() {
   const params = useParams()
@@ -20,12 +23,58 @@ export default function ProjectDetailsPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [acceptingDelivery, setAcceptingDelivery] = useState(false)
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
+  const [otherUserTyping, setOtherUserTyping] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout>()
   const supabase = createClient()
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchProject()
-    fetchMessages()
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+      
+      fetchProject()
+      fetchMessages()
+      
+      // Subscribe to real-time messages
+      const channel = supabase
+        .channel(`project-${params.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `project_id=eq.${params.id}`
+        }, (payload) => {
+          console.log('New message received:', payload)
+          fetchMessages()
+        })
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          if (payload.userId !== user?.id) {
+            setOtherUserTyping(true)
+            setTimeout(() => setOtherUserTyping(false), 3000)
+          }
+        })
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+    
+    init()
   }, [params.id])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   const fetchProject = async () => {    if (!params.id || Array.isArray(params.id)) return
         const { data, error } = await supabase
@@ -49,36 +98,148 @@ export default function ProjectDetailsPage() {
     
     const { data } = await supabase
       .from('messages')
-      .select('*, sender:sender_id(full_name, avatar_url)')
+      .select('*, sender:sender_id(full_name, avatar_url), file_url')
       .eq('project_id', params.id)
       .order('created_at', { ascending: true })
 
-    if (data) setMessages(data)
+    if (data) {
+      console.log('Fetched messages:', data)
+      setMessages(data)
+    }
+  }
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleTyping = () => {
+    if (!isTyping) {
+      setIsTyping(true)
+      supabase.channel(`project-${params.id}`).send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: currentUserId }
+      })
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false)
+    }, 1000)
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() && !attachedFile) return
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !project) return
 
-    const { error } = await supabase.from('messages').insert({
-      project_id: project.id,
-      sender_id: user.id,
-      receiver_id: project.developer_id,
-      message: newMessage,
-    } as any)
+    setSendingMessage(true)
 
-    if (!error) {
-      setNewMessage('')
-      fetchMessages()
-      toast.success('Message sent')
+    try {
+      let fileUrl = null
+      
+      // Upload file if attached
+      if (attachedFile) {
+        console.log('Uploading file:', attachedFile.name)
+        const fileExt = attachedFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        
+        try {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('message-attachments')
+            .upload(`${project.id}/${fileName}`, attachedFile)
+
+          if (uploadError) {
+            console.error('File upload error:', uploadError)
+            toast.error(`Failed to upload file: ${uploadError.message}`)
+            setSendingMessage(false)
+            return
+          }
+          
+          console.log('File uploaded:', uploadData)
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('message-attachments')
+            .getPublicUrl(uploadData.path)
+          
+          fileUrl = publicUrl
+          console.log('Public URL:', fileUrl)
+        } catch (fileError) {
+          console.error('File handling error:', fileError)
+          toast.error('Failed to handle file attachment')
+          setSendingMessage(false)
+          return
+        }
+      }
+
+      // Client always sends to developer
+      const receiverId = project.developer_id
+
+      if (!receiverId) {
+        toast.error('Cannot send message: No developer assigned to this project yet')
+        setSendingMessage(false)
+        return
+      }
+
+      // Prepare message data
+      const messageData: any = {
+        project_id: project.id,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        message: newMessage || '📎 File attached',
+      }
+
+      // Only add file_url if it exists
+      if (fileUrl) {
+        messageData.file_url = fileUrl
+        console.log('Adding file_url to message:', fileUrl)
+      }
+
+      console.log('Inserting message:', messageData)
+
+      const { error } = await supabase.from('messages').insert(messageData)
+
+      if (error) {
+        console.error('Message insert error:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        toast.error(`Failed to send message: ${error.message || 'Unknown error'}`)
+      } else {
+        setNewMessage('')
+        setAttachedFile(null)
+        fetchMessages()
+        
+        // Create notification for developer
+        try {
+          await supabase.from('notifications').insert({
+            user_id: receiverId,
+            title: 'New Message',
+            message: `You have a new message from ${user.email} about ${project.title}`,
+            type: 'info',
+            link: `/developer/projects/${project.id}`,
+          } as any)
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError)
+          // Don't show error to user, message was sent successfully
+        }
+        
+        toast.success('Message sent')
+      }
+    } catch (error) {
+      console.error('Send message error:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
   const handlePayment = async () => {
     if (!project) return
     
+    setPaymentLoading(true)
     try {
       const response = await fetch('/api/payments/initialize', {
         method: 'POST',
@@ -89,27 +250,49 @@ export default function ProjectDetailsPage() {
         }),
       })
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Payment initialization failed:', response.status, errorText)
+        toast.error('Payment initialization failed. Please try again.')
+        setPaymentLoading(false)
+        return
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid response content type:', contentType)
+        toast.error('Invalid server response. Please try again.')
+        setPaymentLoading(false)
+        return
+      }
+
       const data = await response.json()
       if (data.authorization_url) {
         window.location.href = data.authorization_url
       }
     } catch (error) {
       toast.error('Failed to initialize payment')
+      setPaymentLoading(false)
     }
   }
 
   const acceptDelivery = async () => {
     if (!project) return
 
-    const { error } = await supabase
+    setAcceptingDelivery(true)
+    // @ts-ignore - Supabase type issue
+    const result = await supabase
       .from('projects')
-      .update({ status: 'delivered' } as any)
+      .update({ status: 'delivered' })
       .eq('id', project.id)
 
-    if (!error) {
+    if (!result.error) {
       toast.success('Project accepted! Payment released.')
       fetchProject()
+    } else {
+      toast.error('Failed to accept delivery')
     }
+    setAcceptingDelivery(false)
   }
 
   const downloadInvoice = async () => {
@@ -118,23 +301,24 @@ export default function ProjectDetailsPage() {
       return
     }
     
+    setDownloadingDoc('invoice')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     // Fetch client and developer separately
-    const [clientResult, developerResult] = await Promise.all([
-      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
-      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
-    ])
+    const clientResult: any = await supabase.from('users').select('full_name, email').eq('id', project.client_id).single()
+    const developerResult: any = await supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
 
     if (!clientResult.data || !developerResult.data) {
       console.error('Failed to fetch user data:', { clientResult, developerResult })
       toast.error('Could not load user information')
+      setDownloadingDoc(null)
       return
     }
     
     generateInvoice(project as any, clientResult.data, developerResult.data)
     toast.success('Invoice downloaded!')
+    setDownloadingDoc(null)
   }
 
   const downloadReceipt = async () => {
@@ -143,17 +327,16 @@ export default function ProjectDetailsPage() {
       return
     }
     
+    setDownloadingDoc('receipt')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     
     console.log('Fetching payment for project:', project.id)
     
     // Fetch payment data and user data
-    const [paymentResult, clientResult, developerResult] = await Promise.all([
-      supabase.from('payments').select('*').eq('project_id', project.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
-      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
-    ])
+    const paymentResult: any = await supabase.from('payments').select('*').eq('project_id', project.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    const clientResult: any = await supabase.from('users').select('full_name, email').eq('id', project.client_id).single()
+    const developerResult: any = await supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
 
     console.log('Full payment result:', JSON.stringify(paymentResult, null, 2))
     console.log('Has error?', !!paymentResult.error)
@@ -177,6 +360,7 @@ export default function ProjectDetailsPage() {
 
     generateReceipt(project as any, clientResult.data, developerResult.data, paymentResult.data as any)
     toast.success('Receipt downloaded!')
+    setDownloadingDoc(null)
   }
 
   const downloadContract = async () => {
@@ -185,14 +369,13 @@ export default function ProjectDetailsPage() {
       return
     }
     
+    setDownloadingDoc('contract')
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     
     // Fetch client and developer separately
-    const [clientResult, developerResult] = await Promise.all([
-      supabase.from('users').select('full_name, email').eq('id', project.client_id).single(),
-      supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
-    ])
+    const clientResult: any = await supabase.from('users').select('full_name, email').eq('id', project.client_id).single()
+    const developerResult: any = await supabase.from('users').select('full_name, email').eq('id', project.developer_id).single()
 
     if (!clientResult.data || !developerResult.data) {
       console.error('Failed to fetch user data:', { clientResult, developerResult })
@@ -202,6 +385,7 @@ export default function ProjectDetailsPage() {
     
     generateContract(project as any, clientResult.data, developerResult.data)
     toast.success('Contract downloaded!')
+    setDownloadingDoc(null)
   }
 
   if (loading) {
@@ -275,32 +459,154 @@ export default function ProjectDetailsPage() {
               <CardTitle>Communication</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
-                {messages.map((message) => (
-                  <div key={message.id} className="flex gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">
-                          {message.sender?.full_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(message.created_at, 'relative')}
-                        </span>
+              <div className="space-y-3 max-h-96 overflow-y-auto mb-4 p-4 bg-muted/30 rounded-lg">
+                {messages.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Start the conversation!</p>
+                ) : (
+                  messages.map((message) => {
+                    const isOwnMessage = message.sender_id === currentUserId
+                    return (
+                      <div key={message.id} className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                        {!isOwnMessage && (
+                          <Avatar className="h-8 w-8 mt-1">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(message.sender?.full_name || 'User')}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                          <div className={`rounded-2xl px-4 py-2 ${
+                            isOwnMessage 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-card border'
+                          }`}>
+                            {!isOwnMessage && (
+                              <p className="text-xs font-semibold mb-1 opacity-70">
+                                {message.sender?.full_name}
+                              </p>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                            {message.file_url && (
+                              <a 
+                                href={message.file_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs underline mt-1 block opacity-80 hover:opacity-100"
+                              >
+                                📎 View attachment
+                              </a>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                            {formatDate(message.created_at, 'relative')}
+                          </span>
+                        </div>
+                        {isOwnMessage && (
+                          <Avatar className="h-8 w-8 mt-1">
+                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                              {getInitials(message.sender?.full_name || 'You')}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
-                      <p className="text-sm">{message.message}</p>
+                    )
+                  })
+                )}
+                {otherUserTyping && (
+                  <div className="flex gap-2 items-center">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">...</AvatarFallback>
+                    </Avatar>
+                    <div className="bg-card border rounded-2xl px-4 py-2">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                      </div>
                     </div>
                   </div>
-                ))}
+                )}
+                <div ref={messagesEndRef} />
               </div>
+              
+              {/* File Preview */}
+              {attachedFile && (
+                <div className="flex items-center gap-2 mb-2 p-2 bg-muted rounded-md">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="text-sm flex-1 truncate">{attachedFile.name}</span>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setAttachedFile(null)}
+                    className="h-6 w-6 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+              
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <div className="mb-2">
+                  <EmojiPicker 
+                    onEmojiClick={(emojiData) => {
+                      setNewMessage(prev => prev + emojiData.emoji)
+                      setShowEmojiPicker(false)
+                    }}
+                    width="100%"
+                    height="350px"
+                  />
+                </div>
+              )}
+              
+              {/* Input Area */}
               <div className="flex gap-2">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setAttachedFile(e.target.files[0])
+                    }
+                  }}
+                />
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  disabled={sendingMessage}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={sendingMessage}
+                >
+                  <Smile className="h-4 w-4" />
+                </Button>
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value)
+                    handleTyping()
+                  }}
+                  onKeyPress={(e) => e.key === 'Enter' && !sendingMessage && sendMessage()}
+                  disabled={sendingMessage}
+                  className="flex-1"
                 />
-                <Button onClick={sendMessage}>
-                  <Send className="h-4 w-4" />
+                <Button 
+                  onClick={sendMessage}
+                  disabled={sendingMessage || (!newMessage.trim() && !attachedFile)}
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -332,8 +638,19 @@ export default function ProjectDetailsPage() {
               
               {/* Show Pay Now button only if approved and not paid */}
               {project.status === 'approved' && (
-                <Button className="w-full" onClick={handlePayment}>
-                  Pay Now
+                <Button 
+                  className="w-full" 
+                  onClick={handlePayment}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Pay Now'
+                  )}
                 </Button>
               )}
               
@@ -359,9 +676,19 @@ export default function ProjectDetailsPage() {
                       size="sm" 
                       className="w-full justify-start"
                       onClick={downloadContract}
+                      disabled={downloadingDoc === 'contract'}
                     >
-                      <FileSignature className="h-4 w-4 mr-2" />
-                      Download Contract
+                      {downloadingDoc === 'contract' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <FileSignature className="h-4 w-4 mr-2" />
+                          Download Contract
+                        </>
+                      )}
                     </Button>
                   )}
                   
@@ -372,9 +699,19 @@ export default function ProjectDetailsPage() {
                       size="sm" 
                       className="w-full justify-start"
                       onClick={downloadInvoice}
+                      disabled={downloadingDoc === 'invoice'}
                     >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download Invoice
+                      {downloadingDoc === 'invoice' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Download Invoice
+                        </>
+                      )}
                     </Button>
                   )}
                   
@@ -385,9 +722,19 @@ export default function ProjectDetailsPage() {
                       size="sm" 
                       className="w-full justify-start"
                       onClick={downloadReceipt}
+                      disabled={downloadingDoc === 'receipt'}
                     >
-                      <Receipt className="h-4 w-4 mr-2" />
-                      Download Receipt
+                      {downloadingDoc === 'receipt' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Receipt className="h-4 w-4 mr-2" />
+                          Download Receipt
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -395,9 +742,22 @@ export default function ProjectDetailsPage() {
               
               {/* Show accept delivery button when completed */}
               {project.status === 'completed' && (
-                <Button className="w-full" onClick={acceptDelivery}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Accept & Release Payment
+                <Button 
+                  className="w-full" 
+                  onClick={acceptDelivery}
+                  disabled={acceptingDelivery}
+                >
+                  {acceptingDelivery ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Accept & Release Payment
+                    </>
+                  )}
                 </Button>
               )}
               

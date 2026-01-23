@@ -32,6 +32,18 @@ export function NotificationDropdown({ userRole }: { userRole: 'client' | 'devel
     try {
       console.log('Fetching notifications...')
       const res = await fetch('/api/notifications')
+      
+      if (!res.ok) {
+        console.error('Failed to fetch notifications:', res.status)
+        return
+      }
+      
+      const contentType = res.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid response content type:', contentType)
+        return
+      }
+      
       const data = await res.json()
       console.log('Notifications response:', data)
       if (data.notifications) {

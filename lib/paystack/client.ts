@@ -34,7 +34,14 @@ export async function initializePayment(data: PaymentData) {
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Payment initialization failed:', response.status, errorText)
       throw new Error('Payment initialization failed')
+    }
+    
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response from payment server')
     }
 
     return await response.json()
@@ -49,7 +56,14 @@ export async function verifyPayment(reference: string) {
     const response = await fetch(`/api/payments/verify?reference=${reference}`)
     
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Payment verification failed:', response.status, errorText)
       throw new Error('Payment verification failed')
+    }
+    
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response from payment server')
     }
 
     return await response.json()

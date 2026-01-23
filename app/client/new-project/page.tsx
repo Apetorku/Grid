@@ -84,9 +84,16 @@ export default function NewProjectPage() {
         }),
       })
 
+      if (!ensureUserResponse.ok) {
+        const errorText = await ensureUserResponse.text()
+        console.error('Ensure user error:', ensureUserResponse.status, errorText)
+        toast.error('Failed to verify user account. Please try again.')
+        return
+      }
+
       const ensureUserData = await ensureUserResponse.json()
       
-      if (!ensureUserResponse.ok) {
+      if (ensureUserData.error) {
         console.error('Ensure user error:', ensureUserData)
         throw new Error(ensureUserData.error || 'Failed to verify user account')
       }

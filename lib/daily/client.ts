@@ -21,7 +21,14 @@ export async function createMeeting(projectId: string) {
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Meeting creation failed:', response.status, errorText)
       throw new Error('Failed to create meeting')
+    }
+    
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response from meeting server')
     }
 
     return await response.json()

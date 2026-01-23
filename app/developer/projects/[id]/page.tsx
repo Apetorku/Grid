@@ -10,10 +10,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils'
+import { formatCurrency, formatDate, getStatusColor, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Send, Upload, Video } from 'lucide-react'
+import { Send, Upload, Video, Paperclip, Smile, Loader2 } from 'lucide-react'
+import EmojiPicker from 'emoji-picker-react'
 
 export default function DeveloperProjectPage() {
   const params = useParams()
@@ -25,11 +27,21 @@ export default function DeveloperProjectPage() {
   const [repoUrl, setRepoUrl] = useState('')
   const [hostingUrl, setHostingUrl] = useState('')
   const [loading, setLoading] = useState(true)
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    fetchProject()
-    fetchMessages()
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+      
+      fetchProject()
+      fetchMessages()
+    }
+    init()
   }, [params.id])
 
   const fetchProject = async () => {
@@ -55,30 +67,112 @@ export default function DeveloperProjectPage() {
     
     const { data } = await supabase
       .from('messages')
-      .select('*, sender:sender_id(full_name, avatar_url)')
+      .select('*, sender:sender_id(full_name, avatar_url), file_url')
       .eq('project_id', params.id)
       .order('created_at', { ascending: true })
 
-    if (data) setMessages(data)
+    if (data) {
+      console.log('Developer fetched messages:', data)
+      setMessages(data)
+    }
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !project) return
+    if (!newMessage.trim() && !attachedFile) return
+    if (!project) return
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase.from('messages').insert({
-      project_id: project.id,
-      sender_id: user.id,
-      receiver_id: project.client_id,
-      message: newMessage,
-    } as any)
+    setSendingMessage(true)
 
-    if (!error) {
-      setNewMessage('')
-      fetchMessages()
-      toast.success('Message sent')
+    try {
+      let fileUrl = null
+      
+      // Upload file if attached
+      if (attachedFile) {
+        console.log('Uploading file:', attachedFile.name)
+        const fileExt = attachedFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        
+        try {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('message-attachments')
+            .upload(`${project.id}/${fileName}`, attachedFile)
+
+          if (uploadError) {
+            console.error('File upload error:', uploadError)
+            toast.error(`Failed to upload file: ${uploadError.message}`)
+            setSendingMessage(false)
+            return
+          }
+          
+          console.log('File uploaded:', uploadData)
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('message-attachments')
+            .getPublicUrl(uploadData.path)
+          
+          fileUrl = publicUrl
+          console.log('Public URL:', fileUrl)
+        } catch (fileError) {
+          console.error('File handling error:', fileError)
+          toast.error('Failed to handle file attachment')
+          setSendingMessage(false)
+          return
+        }
+      }
+
+      // Developer always sends to client
+      const receiverId = project.client_id
+
+      // Prepare message data
+      const messageData: any = {
+        project_id: project.id,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        message: newMessage || '📎 File attached',
+      }
+
+      // Only add file_url if it exists
+      if (fileUrl) {
+        messageData.file_url = fileUrl
+        console.log('Adding file_url to message:', fileUrl)
+      }
+
+      console.log('Inserting message:', messageData)
+
+      const { error } = await supabase.from('messages').insert(messageData)
+
+      if (error) {
+        console.error('Message insert error:', error)
+        toast.error(`Failed to send message: ${error.message || 'Unknown error'}`)
+      } else {
+        setNewMessage('')
+        setAttachedFile(null)
+        fetchMessages()
+        
+        // Create notification for client
+        try {
+          await supabase.from('notifications').insert({
+            user_id: receiverId,
+            title: 'New Message from Developer',
+            message: `You have a new message about ${project.title}`,
+            type: 'info',
+            link: `/client/projects/${project.id}`,
+          } as any)
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError)
+          // Don't show error to user, message was sent successfully
+        }
+        
+        toast.success('Message sent')
+      }
+    } catch (error) {
+      console.error('Send message error:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -323,32 +417,135 @@ export default function DeveloperProjectPage() {
               <CardTitle>Communication</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
-                {messages.map((message) => (
-                  <div key={message.id} className="flex gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">
-                          {message.sender?.full_name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(message.created_at, 'relative')}
-                        </span>
+              <div className="space-y-3 max-h-96 overflow-y-auto mb-4 p-4 bg-muted/30 rounded-lg">
+                {messages.length === 0 ? (
+                  <p className="text-center text-muted-foreground text-sm py-8">No messages yet. Start the conversation!</p>
+                ) : (
+                  messages.map((message) => {
+                    const isOwnMessage = message.sender_id === currentUserId
+                    return (
+                      <div key={message.id} className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                        {!isOwnMessage && (
+                          <Avatar className="h-8 w-8 mt-1">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(message.sender?.full_name || 'User')}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                          <div className={`rounded-2xl px-4 py-2 ${
+                            isOwnMessage 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-card border'
+                          }`}>
+                            {!isOwnMessage && (
+                              <p className="text-xs font-semibold mb-1 opacity-70">
+                                {message.sender?.full_name}
+                              </p>
+                            )}
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                            {message.file_url && (
+                              <a 
+                                href={message.file_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs underline mt-1 block opacity-80 hover:opacity-100"
+                              >
+                                📎 View attachment
+                              </a>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                            {formatDate(message.created_at, 'relative')}
+                          </span>
+                        </div>
+                        {isOwnMessage && (
+                          <Avatar className="h-8 w-8 mt-1">
+                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                              {getInitials(message.sender?.full_name || 'You')}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
-                      <p className="text-sm">{message.message}</p>
-                    </div>
-                  </div>
-                ))}
+                    )
+                  })
+                )}
               </div>
+              
+              {/* File Preview */}
+              {attachedFile && (
+                <div className="flex items-center gap-2 mb-2 p-2 bg-muted rounded-md">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="text-sm flex-1 truncate">{attachedFile.name}</span>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setAttachedFile(null)}
+                    className="h-6 w-6 p-0"
+                  >
+                    ×
+                  </Button>
+                </div>
+              )}
+              
+              {/* Emoji Picker */}
+              {showEmojiPicker && (
+                <div className="mb-2">
+                  <EmojiPicker 
+                    onEmojiClick={(emojiData) => {
+                      setNewMessage(prev => prev + emojiData.emoji)
+                      setShowEmojiPicker(false)
+                    }}
+                    width="100%"
+                    height="350px"
+                  />
+                </div>
+              )}
+              
               <div className="flex gap-2">
+                <input
+                  type="file"
+                  id="dev-file-upload"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setAttachedFile(e.target.files[0])
+                    }
+                  }}
+                />
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => document.getElementById('dev-file-upload')?.click()}
+                  disabled={sendingMessage}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={sendingMessage}
+                >
+                  <Smile className="h-4 w-4" />
+                </Button>
                 <Input
                   placeholder="Type a message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyPress={(e) => e.key === 'Enter' && !sendingMessage && sendMessage()}
+                  disabled={sendingMessage}
+                  className="flex-1"
                 />
-                <Button onClick={sendMessage}>
-                  <Send className="h-4 w-4" />
+                <Button 
+                  onClick={sendMessage}
+                  disabled={sendingMessage || (!newMessage.trim() && !attachedFile)}
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>

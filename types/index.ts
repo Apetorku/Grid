@@ -128,6 +128,7 @@ export interface Message {
   receiver_id: string;
   message: string;
   is_read: boolean;
+  file_url?: string;
   attachments?: string[];
   created_at: string;
   sender?: User;
