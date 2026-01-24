@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
-import { Menu, LogOut, Home, FolderKanban, User as UserIcon, Bell, X, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { Menu, LogOut, Home, FolderKanban, User as UserIcon, Bell, X, ChevronLeft, ChevronRight, MessageSquare, Video } from 'lucide-react'
 import { NotificationDropdown } from '@/components/NotificationDropdown'
 import { cn } from '@/lib/utils'
 
@@ -49,6 +49,7 @@ export default function DeveloperLayout({ children }: DeveloperLayoutProps) {
     { href: '/developer', icon: Home, label: 'Dashboard' },
     { href: '/developer/projects', icon: FolderKanban, label: 'Projects' },
     { href: '/developer/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/developer/meetings', icon: Video, label: 'Meetings' },
     { href: '/developer/notifications', icon: Bell, label: 'Notifications' },
     { href: '/developer/profile', icon: UserIcon, label: 'Profile' },
   ]

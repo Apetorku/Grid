@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
-import { Menu, LogOut, Home, FolderKanban, Plus, User as UserIcon, Bell, X, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { Menu, LogOut, Home, FolderKanban, Plus, User as UserIcon, Bell, X, ChevronLeft, ChevronRight, MessageSquare, Video } from 'lucide-react'
 import { NotificationDropdown } from '@/components/NotificationDropdown'
 import { cn } from '@/lib/utils'
 
@@ -50,6 +50,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     { href: '/client/projects', icon: FolderKanban, label: 'My Projects' },
     { href: '/client/new-project', icon: Plus, label: 'New Project' },
     { href: '/client/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/client/meetings', icon: Video, label: 'Meetings' },
     { href: '/client/notifications', icon: Bell, label: 'Notifications' },
     { href: '/client/profile', icon: UserIcon, label: 'Profile' },
   ]
