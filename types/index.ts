@@ -15,6 +15,19 @@ export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
+// Deliverable Types
+export interface ProjectDeliverable {
+  id: string;
+  project_id: string;
+  uploaded_by: string;
+  file_name: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+  description?: string;
+  created_at: string;
+}
+
 // User Types
 export interface User {
   id: string;

@@ -128,18 +128,29 @@ export default function NewProjectPage() {
 
       // Upload files if any
       if (files.length > 0 && project) {
+        console.log('Uploading files:', files.length)
         for (const file of files) {
           const fileName = `${projectData.id}/${Date.now()}-${file.name}`
+          console.log('Uploading file to storage:', fileName)
+          
           const { data: fileData, error: uploadError } = await supabase.storage
             .from('project-files')
             .upload(fileName, file)
 
-          if (!uploadError && fileData) {
+          if (uploadError) {
+            console.error('File upload error:', uploadError)
+            toast.error(`Failed to upload ${file.name}: ${uploadError.message}`)
+            continue
+          }
+
+          if (fileData) {
+            console.log('File uploaded successfully:', fileData.path)
             const { data: { publicUrl } } = supabase.storage
               .from('project-files')
-              .getPublicUrl(fileName)
+              .getPublicUrl(fileData.path)
 
-            await supabase.from('project_files').insert({
+            console.log('Inserting file record to database:', file.name)
+            const { error: dbError } = await supabase.from('project_files').insert({
               project_id: projectData.id,
               uploaded_by: user.id,
               file_name: file.name,
@@ -147,6 +158,13 @@ export default function NewProjectPage() {
               file_type: file.type,
               file_size: file.size,
             } as any)
+
+            if (dbError) {
+              console.error('Database insert error:', dbError)
+              toast.error(`Failed to save ${file.name} record: ${dbError.message}`)
+            } else {
+              console.log('File record saved successfully:', file.name)
+            }
           }
         }
       }

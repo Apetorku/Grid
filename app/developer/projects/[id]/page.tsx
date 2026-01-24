@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Project, Message } from '@/types'
+import { Project, Message, ProjectDeliverable } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getStatusColor, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Send, Upload, Video, Paperclip, Smile, Loader2, ArrowLeft } from 'lucide-react'
+import { Send, Upload, Video, Paperclip, Smile, Loader2, ArrowLeft, FileText, Download, X } from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
 
 export default function DeveloperProjectPage() {
@@ -35,6 +35,11 @@ export default function DeveloperProjectPage() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview')
+  const [deliverables, setDeliverables] = useState<ProjectDeliverable[]>([])
+  const [uploadingDeliverable, setUploadingDeliverable] = useState(false)
+  const [deliverableFile, setDeliverableFile] = useState<File | null>(null)
+  const [deliverableDescription, setDeliverableDescription] = useState('')
+  const [projectFiles, setProjectFiles] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => {
@@ -44,6 +49,8 @@ export default function DeveloperProjectPage() {
       
       fetchProject()
       fetchMessages()
+      fetchDeliverables()
+      fetchProjectFiles()
     }
     init()
   }, [params.id])
@@ -86,6 +93,158 @@ export default function DeveloperProjectPage() {
       console.log('Developer fetched messages:', data)
       setMessages(data)
     }
+  }
+
+  const fetchDeliverables = async () => {
+    if (!params.id || Array.isArray(params.id)) return
+    
+    const { data, error } = await supabase
+      .from('project_deliverables')
+      .select('*')
+      .eq('project_id', params.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching deliverables:', error)
+    } else if (data) {
+      setDeliverables(data)
+    }
+  }
+
+  const fetchProjectFiles = async () => {
+    if (!params.id || Array.isArray(params.id)) return
+    
+    console.log('Fetching project files for project:', params.id)
+    const { data, error } = await supabase
+      .from('project_files')
+      .select('*')
+      .eq('project_id', params.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching project files:', error)
+    } else if (data) {
+      console.log('Project files fetched:', data.length, 'files')
+      console.log('Files:', data)
+      setProjectFiles(data)
+    }
+  }
+
+  const uploadDeliverable = async () => {
+    if (!deliverableFile || !project) return
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    setUploadingDeliverable(true)
+
+    try {
+      // Upload file to storage
+      const fileExt = deliverableFile.name.split('.').pop()
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('project-deliverables')
+        .upload(`${project.id}/${fileName}`, deliverableFile)
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        toast.error(`Failed to upload file: ${uploadError.message}`)
+        setUploadingDeliverable(false)
+        return
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-deliverables')
+        .getPublicUrl(uploadData.path)
+
+      // Save deliverable record to database
+      const { error: dbError } = await supabase
+        .from('project_deliverables')
+        .insert({
+          project_id: project.id,
+          uploaded_by: user.id,
+          file_name: deliverableFile.name,
+          file_url: publicUrl,
+          file_type: deliverableFile.type,
+          file_size: deliverableFile.size,
+          description: deliverableDescription || null,
+        })
+
+      if (dbError) {
+        console.error('Database error:', dbError)
+        toast.error('Failed to save deliverable record')
+        setUploadingDeliverable(false)
+        return
+      }
+
+      toast.success('Deliverable uploaded successfully!')
+      setDeliverableFile(null)
+      setDeliverableDescription('')
+      fetchDeliverables()
+      
+      // Create notification for client
+      await supabase.from('notifications').insert({
+        user_id: project.client_id,
+        type: 'info',
+        title: 'New Deliverable Uploaded',
+        message: `${user.full_name} uploaded a new deliverable: ${deliverableFile.name}`,
+        link: `/client/projects/${project.id}?tab=files`,
+      })
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload deliverable')
+    } finally {
+      setUploadingDeliverable(false)
+    }
+  }
+
+  const deleteDeliverable = async (deliverable: ProjectDeliverable) => {
+    if (!confirm(`Delete ${deliverable.file_name}?`)) return
+
+    try {
+      // Extract path from URL
+      const urlParts = deliverable.file_url.split('/project-deliverables/')
+      if (urlParts.length < 2) {
+        toast.error('Invalid file URL')
+        return
+      }
+      const filePath = urlParts[1]
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('project-deliverables')
+        .remove([filePath])
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError)
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('project_deliverables')
+        .delete()
+        .eq('id', deliverable.id)
+
+      if (dbError) {
+        console.error('Database deletion error:', dbError)
+        toast.error('Failed to delete deliverable')
+        return
+      }
+
+      toast.success('Deliverable deleted')
+      fetchDeliverables()
+    } catch (error) {
+      console.error('Delete error:', error)
+      toast.error('Failed to delete deliverable')
+    }
+  }
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size'
+    const mb = bytes / (1024 * 1024)
+    return mb < 1 ? `${(bytes / 1024).toFixed(2)} KB` : `${mb.toFixed(2)} MB`
   }
 
   const sendMessage = async () => {
@@ -350,6 +509,40 @@ export default function DeveloperProjectPage() {
                   {project.include_hosting ? 'Yes' : 'No'}
                 </Badge>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Client Requirement Files */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Client's Requirement Files</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {projectFiles.length > 0 ? (
+                <div className="space-y-2">
+                  {projectFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <FileText className="h-5 w-5 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.file_name}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(file.file_url, '_blank')}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No requirement files uploaded yet.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -638,47 +831,177 @@ export default function DeveloperProjectPage() {
 
         {/* Files Tab */}
         <TabsContent value="files" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Deliverables</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {project.repository_url || project.hosting_url ? (
-                <>
-                  {project.repository_url && (
-                    <div>
-                      <p className="text-sm font-semibold mb-2">Repository URL</p>
-                      <a
-                        href={project.repository_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline break-all"
+          <div className="space-y-6">
+            {/* Upload Deliverables Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Deliverables</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="deliverable-file">Select File</Label>
+                  <div className="flex gap-2">
+                    <input
+                      id="deliverable-file"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setDeliverableFile(e.target.files[0])
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('deliverable-file')?.click()}
+                      className="flex-1"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {deliverableFile ? deliverableFile.name : 'Choose File'}
+                    </Button>
+                    {deliverableFile && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeliverableFile(null)}
                       >
-                        {project.repository_url}
-                      </a>
-                    </div>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {deliverableFile && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(deliverableFile.size)}
+                    </p>
                   )}
-                  {project.hosting_url && (
-                    <div>
-                      <p className="text-sm font-semibold mb-2">Live Website URL</p>
-                      <a
-                        href={project.hosting_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline break-all"
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliverable-description">Description (Optional)</Label>
+                  <Textarea
+                    id="deliverable-description"
+                    placeholder="E.g., Final website design, Source code, Documentation..."
+                    value={deliverableDescription}
+                    onChange={(e) => setDeliverableDescription(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <Button
+                  onClick={uploadDeliverable}
+                  disabled={!deliverableFile || uploadingDeliverable}
+                  className="w-full"
+                >
+                  {uploadingDeliverable ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Deliverable
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Uploaded Deliverables List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Uploaded Files</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {deliverables.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No deliverables uploaded yet
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {deliverables.map((deliverable) => (
+                      <div
+                        key={deliverable.id}
+                        className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
-                        {project.hosting_url}
-                      </a>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No deliverables uploaded yet.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                        <FileText className="h-8 w-8 text-primary shrink-0 mt-1" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{deliverable.file_name}</p>
+                          {deliverable.description && (
+                            <p className="text-sm text-muted-foreground">{deliverable.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>{formatFileSize(deliverable.file_size)}</span>
+                            <span>•</span>
+                            <span>{formatDate(deliverable.created_at)}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => window.open(deliverable.file_url, '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteDeliverable(deliverable)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Repository & Hosting URLs */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Links</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {project.repository_url || project.hosting_url ? (
+                  <>
+                    {project.repository_url && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Repository URL</p>
+                        <a
+                          href={project.repository_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline break-all"
+                        >
+                          {project.repository_url}
+                        </a>
+                      </div>
+                    )}
+                    {project.hosting_url && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2">Live Website URL</p>
+                        <a
+                          href={project.hosting_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline break-all"
+                        >
+                          {project.hosting_url}
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Links will appear here after project submission
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

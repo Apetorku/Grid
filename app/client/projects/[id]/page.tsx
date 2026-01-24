@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Project, Message } from '@/types'
+import { Project, Message, ProjectDeliverable } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,8 @@ export default function ProjectDetailsPage() {
   const supabase = createClient()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview')
+  const [deliverables, setDeliverables] = useState<ProjectDeliverable[]>([])
+  const [paymentExists, setPaymentExists] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -46,6 +48,8 @@ export default function ProjectDetailsPage() {
       
       fetchProject()
       fetchMessages()
+      fetchDeliverables()
+      checkPaymentStatus()
       
       // Subscribe to real-time messages
       const channel = supabase
@@ -117,6 +121,45 @@ export default function ProjectDetailsPage() {
       console.log('Fetched messages:', data)
       setMessages(data)
     }
+  }
+
+  const fetchDeliverables = async () => {
+    if (!params.id || Array.isArray(params.id)) return
+    
+    const { data, error } = await supabase
+      .from('project_deliverables')
+      .select('*')
+      .eq('project_id', params.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching deliverables:', error)
+    } else if (data) {
+      setDeliverables(data)
+    }
+  }
+
+  const checkPaymentStatus = async () => {
+    if (!params.id || Array.isArray(params.id)) return
+    
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('project_id', params.id)
+      .eq('status', 'escrowed')
+      .single()
+
+    if (data && !error) {
+      setPaymentExists(true)
+    } else {
+      setPaymentExists(false)
+    }
+  }
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size'
+    const mb = bytes / (1024 * 1024)
+    return mb < 1 ? `${(bytes / 1024).toFixed(2)} KB` : `${mb.toFixed(2)} MB`
   }
 
   const scrollToBottom = () => {
@@ -507,7 +550,7 @@ export default function ProjectDetailsPage() {
                   )}
                   
                   {/* Show Pay Now button only if approved and not paid */}
-                  {project.status === 'approved' && (
+                  {project.status === 'approved' && !paymentExists && (
                     <Button 
                       className="w-full" 
                       onClick={handlePayment}
@@ -522,6 +565,36 @@ export default function ProjectDetailsPage() {
                         'Pay Now'
                       )}
                     </Button>
+                  )}
+
+                  {/* Show Paid status with receipt if payment exists */}
+                  {project.status === 'approved' && paymentExists && (
+                    <div className="space-y-3">
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm font-medium text-green-800">✓ Payment Complete</p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Funds secured in escrow
+                        </p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={downloadReceipt}
+                        disabled={downloadingDoc === 'receipt'}
+                      >
+                        {downloadingDoc === 'receipt' ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Receipt className="h-4 w-4 mr-2" />
+                            Download Receipt
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   )}
                   
                   {/* Show payment status for in_progress, completed, delivered */}
@@ -774,6 +847,87 @@ export default function ProjectDetailsPage() {
         </TabsContent>
 
         <TabsContent value="files" className="space-y-6">
+          {/* Project Deliverables */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Deliverables</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {deliverables.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No deliverables uploaded yet. Your developer will upload project files here.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {deliverables.map((deliverable) => (
+                    <div
+                      key={deliverable.id}
+                      className="flex items-start gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <FileText className="h-8 w-8 text-primary shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{deliverable.file_name}</p>
+                        {deliverable.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{deliverable.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          <span>{formatFileSize(deliverable.file_size)}</span>
+                          <span>•</span>
+                          <span>{formatDate(deliverable.created_at)}</span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => window.open(deliverable.file_url, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Project Links */}
+          {(project.repository_url || project.hosting_url) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Links</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {project.repository_url && (
+                  <div className="p-3 border rounded-lg">
+                    <p className="text-sm font-semibold mb-2">Repository URL</p>
+                    <a
+                      href={project.repository_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline break-all"
+                    >
+                      {project.repository_url}
+                    </a>
+                  </div>
+                )}
+                {project.hosting_url && (
+                  <div className="p-3 border rounded-lg">
+                    <p className="text-sm font-semibold mb-2">Live Website URL</p>
+                    <a
+                      href={project.hosting_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline break-all"
+                    >
+                      {project.hosting_url}
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Documents */}
           <Card>
             <CardHeader>
               <CardTitle>Project Documents</CardTitle>
