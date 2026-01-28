@@ -14,16 +14,16 @@ export type Updates<T extends keyof Database['public']['Tables']> =
 
 // Specific table types
 export type User = Tables<'users'>
-export type DeveloperProfile = Tables<'developer_profiles'>
+// export type DeveloperProfile = Tables<'developer_profiles'>
 export type Project = Tables<'projects'>
-export type ProjectFile = Tables<'project_files'>
-export type Appointment = Tables<'appointments'>
-export type Payment = Tables<'payments'>
-export type Notification = Tables<'notifications'>
-export type Message = Tables<'messages'>
-export type ScreenSession = Tables<'screen_sessions'>
-export type ProjectReview = Tables<'project_reviews'>
-export type ActivityLog = Tables<'activity_logs'>
+// export type ProjectFile = Tables<'project_files'>
+// export type Appointment = Tables<'appointments'>
+// export type Payment = Tables<'payments'>
+// export type Notification = Tables<'notifications'>
+// export type Message = Tables<'messages'>
+// export type ScreenSession = Tables<'screen_sessions'>
+// export type ProjectReview = Tables<'project_reviews'>
+// export type ActivityLog = Tables<'activity_logs'>
 
 // Extended types with relations
 export type ProjectWithClient = Project & {
@@ -34,12 +34,12 @@ export type ProjectWithDeveloper = Project & {
   developer?: Pick<User, 'full_name' | 'email'> | null
 }
 
-export type MessageWithSender = Message & {
-  sender?: Pick<User, 'full_name' | 'avatar_url'> | null
-}
+// export type MessageWithSender = Message & {
+//   sender?: Pick<User, 'full_name' | 'avatar_url'> | null
+// }
 
-export type PaymentWithRelations = Payment & {
-  project?: Project | null
-  client?: User | null
-  developer?: User | null
-}
+// export type PaymentWithRelations = Payment & {
+//   project?: Project | null
+//   client?: User | null
+//   developer?: User | null
+// }

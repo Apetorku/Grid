@@ -9,13 +9,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { formatDate, getStatusColor, getInitials, formatCurrency } from '@/lib/utils'
 import { generateInvoice, generateReceipt, generateContract } from '@/lib/pdfGenerator'
 import { toast } from 'sonner'
-import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature, Paperclip, Smile, Loader2, Phone, ArrowLeft } from 'lucide-react'
+import { Send, Download, Video, CheckCircle, FileText, Receipt, FileSignature, Paperclip, Smile, Loader2, ArrowLeft } from 'lucide-react'
 import EmojiPicker from 'emoji-picker-react'
-import dynamic from 'next/dynamic'
 
 export default function ProjectDetailsPage() {
   const params = useParams()
@@ -324,7 +323,7 @@ export default function ProjectDetailsPage() {
       if (data.authorization_url) {
         window.location.href = data.authorization_url
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to initialize payment')
       setPaymentLoading(false)
     }
@@ -334,9 +333,8 @@ export default function ProjectDetailsPage() {
     if (!project) return
 
     setAcceptingDelivery(true)
-    // @ts-ignore - Supabase type issue
-    const result = await supabase
-      .from('projects')
+    const result = await (supabase
+      .from('projects') as any)
       .update({ status: 'delivered' })
       .eq('id', project.id)
 

@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getStatusColor, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -160,8 +159,8 @@ export default function DeveloperProjectPage() {
         .getPublicUrl(uploadData.path)
 
       // Save deliverable record to database
-      const { error: dbError } = await supabase
-        .from('project_deliverables')
+      const { error: dbError } = await (supabase
+        .from('project_deliverables') as any)
         .insert({
           project_id: project.id,
           uploaded_by: user.id,
@@ -185,11 +184,11 @@ export default function DeveloperProjectPage() {
       fetchDeliverables()
       
       // Create notification for client
-      await supabase.from('notifications').insert({
+      await (supabase.from('notifications') as any).insert({
         user_id: project.client_id,
         type: 'info',
         title: 'New Deliverable Uploaded',
-        message: `${user.full_name} uploaded a new deliverable: ${deliverableFile.name}`,
+        message: `${(user as any).full_name} uploaded a new deliverable: ${deliverableFile.name}`,
         link: `/client/projects/${project.id}?tab=files`,
       })
     } catch (error) {
@@ -362,14 +361,14 @@ export default function DeveloperProjectPage() {
       duration: parseInt(duration)
     })
 
-    const { data, error } = await supabase
-      .from('projects')
+    const { data, error } = await (supabase
+      .from('projects') as any)
       .update({
         developer_id: user.id,
         final_cost: parseFloat(finalCost),
         estimated_duration: parseInt(duration),
         status: 'approved',
-      } as any)
+      })
       .eq('id', project.id)
       .select()
 
@@ -399,8 +398,8 @@ export default function DeveloperProjectPage() {
   }
 
   const startProject = async () => {
-    const { error } = await supabase
-      .from('projects')
+    const { error } = await (supabase
+      .from('projects') as any)
       .update({
         status: 'in_progress',
         started_at: new Date().toISOString(),
@@ -431,9 +430,9 @@ export default function DeveloperProjectPage() {
 
     if (!params.id || Array.isArray(params.id)) return
 
-    const { error } = await supabase
-      .from('projects')
-      .update(updateData as any)
+    const { error } = await (supabase
+      .from('projects') as any)
+      .update(updateData)
       .eq('id', params.id)
 
     if (!error) {
@@ -515,7 +514,7 @@ export default function DeveloperProjectPage() {
           {/* Client Requirement Files */}
           <Card>
             <CardHeader>
-              <CardTitle>Client's Requirement Files</CardTitle>
+              <CardTitle>Client&apos;s Requirement Files</CardTitle>
             </CardHeader>
             <CardContent>
               {projectFiles.length > 0 ? (

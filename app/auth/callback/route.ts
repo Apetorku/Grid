@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         .single()
 
       if (!existingUser) {
-        await supabase.from('users').insert({
+        await (supabase.from('users') as any).insert({
           id: user.id,
           email: user.email!,
           full_name: user.user_metadata.full_name || user.email!.split('@')[0],
@@ -32,8 +32,8 @@ export async function GET(request: Request) {
       }
 
       // Get user role and redirect
-      const { data: userData } = await supabase
-        .from('users')
+      const { data: userData } = await (supabase
+        .from('users') as any)
         .select('role')
         .eq('id', user.id)
         .single()

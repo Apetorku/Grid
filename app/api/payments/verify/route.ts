@@ -45,38 +45,35 @@ export async function GET(request: NextRequest) {
 
     console.log('Found payment record:', existingPayment)
 
+    const projectId = (existingPayment as any).project_id
+
     // Update payment record
-    const { data: payment, error: updateError } = await supabase
-      .from('payments')
+    const { error: updateError } = await (supabase
+      .from('payments') as any)
       .update({
         status: 'escrowed',
         paystack_transaction_id: data.data.id,
         escrow_date: new Date().toISOString(),
-      } as any)
+      })
       .eq('paystack_reference', reference)
-      .select()
-      .single()
 
     if (updateError) {
       console.error('Error updating payment:', updateError)
     }
 
-    const paymentData = payment as any
-    const projectId = existingPayment.project_id
-
     console.log('Payment updated, project_id:', projectId)
 
     if (projectId) {
       // Update project status
-      await supabase
-        .from('projects')
-        .update({ status: 'in_progress' } as any)
+      await (supabase
+        .from('projects') as any)
+        .update({ status: 'in_progress' })
         .eq('id', projectId)
 
       // Create notification for developer
-      if (existingPayment.developer_id) {
+      if ((existingPayment as any).developer_id) {
         const { error: devNotifError } = await supabase.from('notifications').insert({
-          user_id: existingPayment.developer_id,
+          user_id: (existingPayment as any).developer_id,
           title: 'New Project Payment Received',
           message: 'A client has paid for a project. You can now start working on it.',
           type: 'success',
@@ -88,9 +85,9 @@ export async function GET(request: NextRequest) {
       }
 
       // Create notification for client
-      if (existingPayment.client_id) {
+      if ((existingPayment as any).client_id) {
         const { error: clientNotifError } = await supabase.from('notifications').insert({
-          user_id: existingPayment.client_id,
+          user_id: (existingPayment as any).client_id,
           title: 'Payment Successful',
           message: 'Your payment has been secured in escrow. The developer will start working on your project.',
           type: 'success',

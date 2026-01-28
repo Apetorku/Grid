@@ -24,13 +24,13 @@ export async function POST(request: NextRequest) {
 
     if (event === 'charge.success') {
       // Update payment and project status
-      await supabase
-        .from('payments')
+      await (supabase
+        .from('payments') as any)
         .update({
           status: 'escrowed',
           paystack_transaction_id: data.id,
           escrow_date: new Date().toISOString(),
-        } as any)
+        })
         .eq('paystack_reference', data.reference)
     }
 
