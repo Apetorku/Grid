@@ -49,8 +49,9 @@ export default function ClientMessagesPage() {
       if (!user) return;
 
       // Fetch all client's projects with developer info
-      const { data: projectsData, error: projectsError } = await (supabase
-        .from("projects") as any)
+      const { data: projectsData, error: projectsError } = await (
+        supabase.from("projects") as any
+      )
         .select(
           `
           id,

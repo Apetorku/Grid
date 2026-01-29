@@ -27,9 +27,9 @@ export default function AdminDashboard() {
       const { data: projects } = await supabase
         .from("projects")
         .select("status, final_cost, estimated_cost");
-      const { data: _payments } = await (supabase
-        .from("payments") as any)
-        .select("amount, status");
+      const { data: _payments } = await (
+        supabase.from("payments") as any
+      ).select("amount, status");
 
       if (users) {
         setStats((prev) => ({

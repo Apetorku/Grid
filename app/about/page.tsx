@@ -148,7 +148,8 @@ export default function AboutPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Excellence</h3>
               <p className="text-blue-100">
-                We&apos;re committed to delivering world-class solutions consistently
+                We&apos;re committed to delivering world-class solutions
+                consistently
               </p>
             </div>
           </div>

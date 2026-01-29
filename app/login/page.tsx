@@ -37,8 +37,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       // Get user role
-      const { data: userData } = await (supabase
-        .from("users") as any)
+      const { data: userData } = await (supabase.from("users") as any)
         .select("role")
         .eq("id", data.user.id)
         .single();

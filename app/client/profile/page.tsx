@@ -31,8 +31,7 @@ export default function ClientProfilePage() {
       } = await supabase.auth.getUser();
       if (!authUser) return;
 
-      const { data: userData } = await (supabase
-        .from("users") as any)
+      const { data: userData } = await (supabase.from("users") as any)
         .select("*")
         .eq("id", authUser.id)
         .single();
@@ -54,8 +53,7 @@ export default function ClientProfilePage() {
     setUpdating(true);
 
     try {
-      const { error } = await (supabase
-        .from("users") as any)
+      const { error } = await (supabase.from("users") as any)
         .update({ full_name: fullName })
         .eq("id", user.id);
 

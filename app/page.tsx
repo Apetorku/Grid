@@ -44,7 +44,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-bg via-navy-950 to-slate-bg">
       {/* Header */}
-      <header className="border-b border-slate-border bg-slate-panel/90 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-border bg-slate-panel/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link
@@ -164,8 +164,8 @@ export default function HomePage() {
             </div>
             <h3 className="text-xl font-bold mb-3 text-white">Secure Escrow</h3>
             <p className="text-slate-400">
-              Your payment is protected with Paystack until you&apos;re completely
-              satisfied with the work
+              Your payment is protected with Paystack until you&apos;re
+              completely satisfied with the work
             </p>
           </div>
 
@@ -379,10 +379,10 @@ export default function HomePage() {
                 </div>
                 <Quote className="h-12 w-12 text-electric-blue/30 mb-4" />
                 <p className="text-2xl text-slate-300 mb-8 leading-relaxed">
-                  &quot;GridNexus transformed our vision into reality. The escrow
-                  system gave us peace of mind, and the developer delivered
-                  beyond expectations. Our e-commerce platform is now generating
-                  3x more revenue!&quot;
+                  &quot;GridNexus transformed our vision into reality. The
+                  escrow system gave us peace of mind, and the developer
+                  delivered beyond expectations. Our e-commerce platform is now
+                  generating 3x more revenue!&quot;
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 rounded-full bg-gradient-to-br from-electric-blue to-electric-cyan flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-electric-blue/30">
@@ -611,9 +611,10 @@ export default function HomePage() {
                 </div>
                 <Quote className="h-12 w-12 text-blue-200 mb-4" />
                 <p className="text-2xl text-slate-700 mb-8 leading-relaxed">
-                  &quot;Professional, secure, and efficient. GridNexus connected us
-                  with a talented developer who understood our business needs.
-                  The payment system made everything transparent and fair.&quot;
+                  &quot;Professional, secure, and efficient. GridNexus connected
+                  us with a talented developer who understood our business
+                  needs. The payment system made everything transparent and
+                  fair.&quot;
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white text-xl font-bold">
@@ -736,8 +737,8 @@ export default function HomePage() {
             Ready to Get Started?
           </h2>
           <p className="text-xl text-slate-300 mb-10 max-w-2xl mx-auto">
-            Join hundreds of satisfied clients who&apos;ve built their dream websites
-            with GridNexus. Start your project today!
+            Join hundreds of satisfied clients who&apos;ve built their dream
+            websites with GridNexus. Start your project today!
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/signup">

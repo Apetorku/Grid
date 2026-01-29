@@ -82,7 +82,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-bg">
       {/* Top Header */}
-      <header className="border-b border-slate-border bg-slate-panel/80 backdrop-blur-md fixed top-0 left-0 right-0 z-40 shadow-lg shadow-black/20">
+      <header className="border-b border-slate-border bg-slate-panel/50 backdrop-blur-md fixed top-0 left-0 right-0 z-40 shadow-lg shadow-black/10">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button

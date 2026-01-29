@@ -80,7 +80,7 @@ export default function DeveloperLayout({ children }: DeveloperLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-bg">
       {/* Top Header */}
-      <header className="border-b bg-gradient-to-br from-navy-950 via-navy-800 to-navy-700 border-slate-border fixed top-0 left-0 right-0 z-40 shadow-lg">
+      <header className="border-b bg-slate-700/50 backdrop-blur-lg border-slate-border fixed top-0 left-0 right-0 z-40 shadow-md">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button

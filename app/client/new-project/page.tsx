@@ -23,7 +23,6 @@ export default function NewProjectPage() {
   const [description, setDescription] = useState("");
   const [requirements, setRequirements] = useState("");
   const [includeHosting, setIncludeHosting] = useState(false);
-  const [numberOfPeople, setNumberOfPeople] = useState(1);
   const [needsDocumentation, setNeedsDocumentation] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,22 +41,22 @@ export default function NewProjectPage() {
 
   const calculateEstimate = () => {
     // New pricing model:
-    // ₵1,500 per person (base price with documentation ready)
-    // +₵800 per person if documentation needs to be created
+    // ₵1,500 (base price with documentation ready)
+    // +₵800 if documentation needs to be created
     // +₵350 for hosting
     // +₵250 for multiple files (>3)
 
-    const basePerPerson = 1500;
-    const documentationCostPerPerson = 800;
+    const basePrice = 1500;
+    const documentationCost = 800;
 
-    let totalCost = basePerPerson * numberOfPeople;
+    let totalCost = basePrice;
 
     // Add documentation cost if needed
     if (needsDocumentation) {
-      totalCost += documentationCostPerPerson * numberOfPeople;
+      totalCost += documentationCost;
     }
 
-    // Add hosting cost (one-time, not per person)
+    // Add hosting cost
     if (includeHosting) {
       totalCost += 350;
     }
@@ -79,6 +78,9 @@ export default function NewProjectPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Clear files if documentation is needed (since upload section is hidden)
+      const filesToUpload = needsDocumentation ? [] : files;
 
       // Ensure user record exists using API route with service role
       const ensureUserResponse = await fetch("/api/ensure-user", {
@@ -125,7 +127,6 @@ export default function NewProjectPage() {
           description,
           requirements,
           include_hosting: includeHosting,
-          number_of_people: numberOfPeople,
           needs_documentation: needsDocumentation,
           estimated_cost: estimatedCost,
           status: "pending_review",
@@ -140,10 +141,10 @@ export default function NewProjectPage() {
 
       const projectData = project as any;
 
-      // Upload files if any
-      if (files.length > 0 && project) {
-        console.log("Uploading files:", files.length);
-        for (const file of files) {
+      // Upload files if any (only when documentation is not needed)
+      if (filesToUpload.length > 0 && project) {
+        console.log("Uploading files:", filesToUpload.length);
+        for (const file of filesToUpload) {
           const fileName = `${projectData.id}/${Date.now()}-${file.name}`;
           console.log("Uploading file to storage:", fileName);
 
@@ -272,28 +273,6 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="numberOfPeople" className="text-white">
-                Number of People in Group *
-              </Label>
-              <Input
-                id="numberOfPeople"
-                type="number"
-                min="1"
-                max="100"
-                placeholder="e.g., 5"
-                value={numberOfPeople}
-                onChange={(e) =>
-                  setNumberOfPeople(parseInt(e.target.value) || 1)
-                }
-                className="bg-slate-card border-slate-border text-white"
-                required
-              />
-              <p className="text-xs text-slate-400">
-                How many people are in your group/team?
-              </p>
-            </div>
-
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -306,7 +285,7 @@ export default function NewProjectPage() {
                 htmlFor="needsDocumentation"
                 className="cursor-pointer text-white"
               >
-                We need documentation created (+₵800)
+                We need documentation created
               </Label>
             </div>
 
@@ -319,138 +298,75 @@ export default function NewProjectPage() {
                 className="rounded border-slate-border"
               />
               <Label htmlFor="hosting" className="cursor-pointer text-white">
-                Include hosting and deployment (+₵350)
+                Include hosting and deployment
               </Label>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-panel border-slate-border">
-          <CardHeader className="bg-gradient-to-r from-navy-900/50 to-navy-800/50 border-b border-slate-border">
-            <CardTitle className="text-white">Upload Documentation</CardTitle>
-            <CardDescription className="text-slate-300">
-              Upload any relevant files (wireframes, designs, documents)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-border rounded-lg cursor-pointer hover:bg-slate-card">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                    <p className="mb-2 text-sm text-slate-300">
-                      <span className="font-semibold">Click to upload</span> or
-                      drag and drop
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      PDF, DOC, images up to 10MB
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
-                  />
-                </label>
-              </div>
-              {files.length > 0 && (
-                <div className="space-y-2">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-slate-card rounded border border-slate-border"
-                    >
-                      <span className="text-sm text-white">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="text-slate-300 hover:text-white"
-                      >
-                        Remove
-                      </Button>
+        {!needsDocumentation && (
+          <Card className="bg-slate-panel border-slate-border">
+            <CardHeader className="bg-gradient-to-r from-navy-900/50 to-navy-800/50 border-b border-slate-border">
+              <CardTitle className="text-white">Upload Documentation</CardTitle>
+              <CardDescription className="text-slate-300">
+                Upload any relevant files (wireframes, designs, documents)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-border rounded-lg cursor-pointer hover:bg-slate-card">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                      <p className="mb-2 text-sm text-slate-300">
+                        <span className="font-semibold">Click to upload</span>{" "}
+                        or drag and drop
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        PDF, DOC, images up to 10MB
+                      </p>
                     </div>
-                  ))}
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileChange}
+                      accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                    />
+                  </label>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-panel border-slate-border">
-          <CardHeader className="bg-gradient-to-r from-navy-900/50 to-navy-800/50 border-b border-slate-border">
-            <CardTitle className="text-white">Cost Estimate</CardTitle>
-            <CardDescription className="text-slate-300">
-              Based on your requirements, here&apos;s the pricing breakdown
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-6">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-400">
-                  Base price ({numberOfPeople}{" "}
-                  {numberOfPeople === 1 ? "person" : "people"} × ₵1,500)
-                </span>
-                <span className="font-medium text-white">
-                  ₵{(1500 * numberOfPeople).toLocaleString()}
-                </span>
+                {files.length > 0 && (
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-slate-card rounded border border-slate-border"
+                      >
+                        <span className="text-sm text-white">{file.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="text-slate-300 hover:text-white"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {needsDocumentation && (
-                <div className="flex justify-between">
-                  <span className="text-slate-400">
-                    Documentation ({numberOfPeople} × ₵800)
-                  </span>
-                  <span className="font-medium text-white">
-                    ₵{(800 * numberOfPeople).toLocaleString()}
-                  </span>
-                </div>
-              )}
-
-              {includeHosting && (
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Hosting & Deployment</span>
-                  <span className="font-medium text-white">₵350</span>
-                </div>
-              )}
-
-              {files.length > 3 && (
-                <div className="flex justify-between">
-                  <span className="text-slate-400">
-                    Multiple files handling
-                  </span>
-                  <span className="font-medium text-white">₵250</span>
-                </div>
-              )}
-
-              <div className="border-t border-slate-border pt-2 mt-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-white">
-                    Total Estimate
-                  </span>
-                  <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-electric-cyan">
-                    ₵{calculateEstimate().toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-400">
-              This is a preliminary estimate. Final pricing will be confirmed
-              after developer review.
-            </p>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex justify-end gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => router.back()}
-            className="border-slate-border text-white hover:border-electric-blue hover:text-electric-blue"
+            className="bg-gradient-to-r from-electric-blue to-electric-cyan hover:from-electric-blue/90 hover:to-electric-cyan/90 text-white font-semibold shadow-lg shadow-electric-blue/30"
           >
             Cancel
           </Button>

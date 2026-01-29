@@ -54,10 +54,9 @@ export default function DeveloperProfilePage() {
     setUpdating(true);
 
     try {
-      const { error } = await ((supabase
-        .from("users") as any)
+      const { error } = await (supabase.from("users") as any)
         .update({ full_name: fullName })
-        .eq("id", user.id));
+        .eq("id", user.id);
 
       if (error) throw error;
 

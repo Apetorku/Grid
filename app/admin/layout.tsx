@@ -119,7 +119,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <header className="border-b border-slate-border bg-gradient-to-br from-navy-950 via-navy-800 to-navy-700 px-6 py-4 shadow-lg">
+        <header className="border-b border-slate-border bg-slate-700/50 backdrop-blur-lg px-6 py-4 shadow-md">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-white">Admin Panel</h1>
             <div className="flex items-center gap-4">
