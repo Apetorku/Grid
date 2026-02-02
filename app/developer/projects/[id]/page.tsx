@@ -834,7 +834,7 @@ export default function DeveloperProjectPage() {
                       setShowEmojiPicker(false);
                     }}
                     width="100%"
-                    height="350px"
+                    height="250px"
                   />
                 </div>
               )}

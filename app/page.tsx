@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -9,7 +11,8 @@ import {
   Check,
   Star,
   Quote,
-  // X,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // import {
@@ -20,8 +23,9 @@ import { Button } from "@/components/ui/button";
 // } from "@/components/icons";
 import { generateMetadata } from "@/lib/seo";
 import { Carousel } from "@/components/ui/carousel";
+import { useState } from "react";
 
-export const metadata = generateMetadata({
+const metadata = generateMetadata({
   title: "GridNexus - Professional Web Development Marketplace",
   description:
     "Connect with expert developers, get instant quotes, and build your dream website with secure escrow payment protection. Real-time collaboration, automated workflow, and instant delivery.",
@@ -41,6 +45,8 @@ export const metadata = generateMetadata({
 });
 
 export default function HomePage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-bg via-navy-950 to-slate-bg">
       {/* Header */}
@@ -60,7 +66,7 @@ export default function HomePage() {
                 priority
               />
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               <Link href="/about">
                 <Button
                   variant="ghost"
@@ -83,9 +89,67 @@ export default function HomePage() {
                 </Button>
               </Link>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-white hover:text-electric-blue"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
           </nav>
         </div>
       </header>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 md:hidden backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            className="bg-slate-panel w-full max-w-sm ml-auto h-full p-6 shadow-xl border-l border-slate-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-electric-blue to-electric-cyan bg-clip-text text-transparent">
+                Menu
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-white hover:text-electric-blue"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <nav className="flex flex-col gap-4">
+              <Link href="/about" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-white hover:text-electric-blue hover:bg-white/10"
+                >
+                  About
+                </Button>
+              </Link>
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-white hover:text-electric-blue hover:bg-white/10"
+                >
+                  Login
+                </Button>
+              </Link>
+              <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full bg-gradient-to-r from-electric-blue to-electric-cyan hover:from-electric-blue/90 hover:to-electric-cyan/90 shadow-lg shadow-electric-blue/30">
+                  Get Started
+                </Button>
+              </Link>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 lg:py-32">
