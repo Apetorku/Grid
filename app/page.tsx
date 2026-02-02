@@ -155,11 +155,7 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-20 lg:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-gradient-to-r from-electric-blue/20 to-electric-cyan/20 text-electric-blue border border-electric-blue/30 rounded-full text-sm font-medium">
-                🚀 Professional Web Development Marketplace
-              </span>
-            </div>
+            
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-electric-blue via-electric-cyan to-electric-light bg-clip-text text-transparent leading-tight">
               Build Your Dream Website Securely
             </h1>
