@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { arkeselClient } from '@/lib/arkesel/client'
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
 
@@ -95,6 +96,25 @@ export async function GET(request: NextRequest) {
         } as any)
         if (clientNotifError) {
           console.error('Failed to create client notification:', clientNotifError)
+        }
+
+        // Send SMS to client
+        try {
+          const { data: clientData } = await (supabase
+            .from('users')
+            .select('phone')
+            .eq('id', (existingPayment as any).client_id)
+            .single() as any)
+          
+          if (clientData?.phone) {
+            arkeselClient.sendNotification(
+              clientData.phone,
+              'Payment Successful',
+              'Your payment has been secured in escrow. The developer will start working on your project.'
+            ).catch(err => console.error('SMS failed:', err))
+          }
+        } catch (smsError) {
+          console.error('Failed to send payment SMS:', smsError)
         }
       }
     }

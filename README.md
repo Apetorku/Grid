@@ -11,6 +11,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - **Admin Dashboard**: Platform oversight, user management, analytics
 - **Secure Escrow**: Paystack-powered payment protection
 - **Real-time Communication**: Live chat and notifications
+- **SMS Notifications**: Arkesel-powered SMS alerts for clients (Ghana)
 - **Screen Sharing**: Jitsi Meet integration (Free!) for remote presentations
 - **Automated Workflow**: From booking to delivery with smart status tracking
 
@@ -29,6 +30,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth + Google OAuth
 - **Payment**: Paystack
+- **SMS**: Arkesel (Ghana)
 - **Real-time**: Supabase Realtime + Socket.io
 - **Screen Sharing**: Daily.co
 - **File Storage**: Supabase Storage
@@ -40,6 +42,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - npm or yarn
 - Supabase account
 - Paystack account
+- Arkesel account (optional, for SMS notifications)
 - Daily.co account
 - Google OAuth credentials
 

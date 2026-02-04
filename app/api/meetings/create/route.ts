@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { arkeselClient } from '@/lib/arkesel/client'
 
 // Using Jitsi Meet - completely free!
 const JITSI_DOMAIN = 'meet.jit.si'
@@ -67,6 +68,25 @@ export async function POST(request: NextRequest) {
       type: 'info',
       link: `/api/meetings/join?sessionId=${sessionData.id}`,
     } as any)
+
+    // Send SMS if the other user is a client
+    try {
+      const { data: otherUser } = await (supabase
+        .from('users')
+        .select('phone, role')
+        .eq('id', otherUserId)
+        .single() as any)
+      
+      if (otherUser?.phone && otherUser?.role === 'client') {
+        arkeselClient.sendNotification(
+          otherUser.phone,
+          'Meeting Started',
+          `A meeting has been started for your project: ${projectData.title}. Join now at: ${process.env.NEXT_PUBLIC_APP_URL}/meetings/${sessionData.id}`
+        ).catch(err => console.error('SMS failed:', err))
+      }
+    } catch (smsError) {
+      console.error('Failed to send meeting SMS:', smsError)
+    }
 
     return NextResponse.json({
       roomUrl: roomUrl,

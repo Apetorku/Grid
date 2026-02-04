@@ -21,6 +21,8 @@ import {
   Video,
 } from "lucide-react";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner";
+import PhoneNumberModal from "@/components/PhoneNumberModal";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -81,6 +83,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <div className="min-h-screen bg-slate-bg">
+      {/* Phone Number Modal */}
+      <PhoneNumberModal />
+
       {/* Top Header */}
       <header className="border-b border-slate-border bg-slate-panel/50 backdrop-blur-md fixed top-0 left-0 right-0 z-40 shadow-lg shadow-black/10">
         <div className="px-4 py-3 flex items-center justify-between">
@@ -246,6 +251,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
       {/* Main Content */}
       <main className="pt-14 md:pl-64">
+        {/* Profile Completion Banner */}
+        <ProfileCompletionBanner />
+        
         <div className="container mx-auto px-4 py-8">{children}</div>
       </main>
     </div>

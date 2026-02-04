@@ -96,9 +96,11 @@
 
 - ✅ In-app notifications
 - ✅ Real-time notification delivery
+- ✅ SMS notifications for clients (Arkesel - Ghana)
 - ✅ Notification types (info, success, warning, error)
 - ✅ Mark as read functionality
 - ✅ Notification history
+- ✅ Automatic SMS for critical events (payments, meetings, completions)
 
 ### 🎨 **UI/UX**
 

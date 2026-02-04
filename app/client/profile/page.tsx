@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/utils";
 export default function ClientProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const supabase = createClient();
@@ -39,6 +40,7 @@ export default function ClientProfilePage() {
       if (userData) {
         setUser({ ...authUser, ...(userData as any) });
         setFullName((userData as any).full_name || "");
+        setPhone((userData as any).phone || "");
       } else {
         setUser(authUser);
       }
@@ -53,14 +55,27 @@ export default function ClientProfilePage() {
     setUpdating(true);
 
     try {
+      const hadNoPhone = !user.phone;
+      
       const { error } = await (supabase.from("users") as any)
-        .update({ full_name: fullName })
+        .update({ 
+          full_name: fullName,
+          phone: phone 
+        })
         .eq("id", user.id);
 
       if (error) throw error;
 
       toast.success("Profile updated successfully!");
-      setUser({ ...user, full_name: fullName });
+      setUser({ ...user, full_name: fullName, phone: phone });
+      
+      // If phone was just added, notify other components and reload
+      if (hadNoPhone && phone) {
+        window.dispatchEvent(new Event("phone-number-updated"));
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -218,6 +233,26 @@ export default function ClientProfilePage() {
                 className="h-12 text-base border-slate-border bg-slate-card text-white"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="phone"
+                className="text-base font-semibold text-white"
+              >
+                Phone Number
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="0241234567 or +233241234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="h-12 text-base border-slate-border bg-slate-card text-white"
+              />
+              <p className="text-sm text-slate-400">
+                📱 Add your phone to receive SMS notifications for payments, meetings, and project updates
+              </p>
             </div>
 
             <div className="space-y-2">

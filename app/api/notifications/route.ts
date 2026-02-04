@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { arkeselClient } from '@/lib/arkesel/client'
 
 export async function GET(_request: Request) {
   try {
@@ -46,6 +47,27 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Send SMS to client if they have a phone number
+    try {
+      const { data: userData } = await (supabase
+        .from('users')
+        .select('phone, role')
+        .eq('id', userId)
+        .single() as any)
+
+      if (userData?.phone && userData?.role === 'client') {
+        // Send SMS notification asynchronously (don't wait for it)
+        arkeselClient.sendNotification(
+          userData.phone,
+          title,
+          message
+        ).catch(err => console.error('SMS failed:', err))
+      }
+    } catch (smsError) {
+      // Log but don't fail the notification creation
+      console.error('SMS notification error:', smsError)
+    }
 
     return NextResponse.json({ notification: data })
   } catch (error: any) {
