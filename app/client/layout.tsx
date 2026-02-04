@@ -102,7 +102,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 alt="GridNexus Logo"
                 width={40}
                 height={40}
-                className="object-contain"
+                className="w-10 h-auto object-contain"
               />
               <span className="text-xl font-bold bg-gradient-to-r from-electric-blue via-electric-cyan to-electric-light bg-clip-text text-transparent">
                 GridNexus

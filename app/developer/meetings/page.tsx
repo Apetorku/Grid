@@ -40,7 +40,7 @@ export default function DeveloperMeetingsPage() {
     if (!user) return;
 
     const { data, error } = await supabase
-      .from("video_sessions")
+      .from("screen_sessions")
       .select(
         `
         *,
@@ -51,7 +51,7 @@ export default function DeveloperMeetingsPage() {
         )
       `,
       )
-      .or(`creator_id.eq.${user.id},participant_id.eq.${user.id}`)
+      .or(`host_id.eq.${user.id},participant_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -131,16 +131,15 @@ export default function DeveloperMeetingsPage() {
                         View Project
                       </Button>
                     </Link>
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        window.open(meeting.daily_room_url, "_blank")
-                      }
-                      className="bg-gradient-to-r from-electric-blue to-electric-cyan hover:shadow-lg hover:shadow-electric-blue/30"
-                    >
-                      <Video className="h-4 w-4 mr-2" />
-                      Join Meeting
-                    </Button>
+                    <Link href={`/meetings/${meeting.id}`}>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-electric-blue to-electric-cyan hover:shadow-lg hover:shadow-electric-blue/30"
+                      >
+                        <Video className="h-4 w-4 mr-2" />
+                        Join Meeting
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </CardContent>

@@ -143,6 +143,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-slate-card border-slate-border text-white"
+                autoComplete="new-password"
                 required
                 minLength={6}
               />

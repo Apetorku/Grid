@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Project, Message, ProjectDeliverable } from "@/types";
+import { createMeeting } from "@/lib/daily/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ export default function ProjectDetailsPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [acceptingDelivery, setAcceptingDelivery] = useState(false);
+  const [startingMeeting, setStartingMeeting] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -751,9 +753,31 @@ export default function ProjectDetailsPage() {
                   <CardTitle>Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button variant="outline" className="w-full">
-                    <Video className="mr-2 h-4 w-4" />
-                    Start Meeting
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={async () => {
+                      if (!project) return;
+                      setStartingMeeting(true);
+                      try {
+                        const { sessionId } = await createMeeting(project.id);
+                        router.push(`/meetings/${sessionId}`);
+                        toast.success("Meeting started successfully");
+                      } catch (error) {
+                        console.error("Failed to start meeting:", error);
+                        toast.error("Failed to start meeting");
+                      } finally {
+                        setStartingMeeting(false);
+                      }
+                    }}
+                    disabled={startingMeeting}
+                  >
+                    {startingMeeting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Video className="mr-2 h-4 w-4" />
+                    )}
+                    {startingMeeting ? "Starting..." : "Start Meeting"}
                   </Button>
                   <Button variant="outline" className="w-full">
                     <Download className="mr-2 h-4 w-4" />

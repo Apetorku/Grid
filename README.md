@@ -5,15 +5,17 @@ A comprehensive platform that streamlines the entire web development service lif
 ## 🚀 Features
 
 ### Core Functionality
+
 - **Client Portal**: Submit project requirements, get automated quotes, book appointments
 - **Developer Portal**: Manage projects, communicate with clients, deliver work
 - **Admin Dashboard**: Platform oversight, user management, analytics
 - **Secure Escrow**: Paystack-powered payment protection
 - **Real-time Communication**: Live chat and notifications
-- **Screen Sharing**: Daily.co integration for remote presentations
+- **Screen Sharing**: Jitsi Meet integration (Free!) for remote presentations
 - **Automated Workflow**: From booking to delivery with smart status tracking
 
 ### Security Features
+
 - OAuth 2.0 authentication (Email/Password + Google)
 - Role-based access control (Client, Developer, Admin)
 - Encrypted data storage
@@ -44,28 +46,34 @@ A comprehensive platform that streamlines the entire web development service lif
 ## 🔧 Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd GridNexus
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    cp .env.example .env.local
    ```
+
    Fill in your API keys and credentials
 
 4. **Run database migrations**
+
    ```bash
    npm run db:migrate
    ```
 
 5. **Start development server**
+
    ```bash
    npm run dev
    ```
@@ -134,6 +142,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ## 🚦 User Flow
 
 ### Client Journey
+
 1. Sign up / Login
 2. Upload project documentation
 3. Receive automated quote
@@ -146,6 +155,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 10. Receive repository (+ hosting URL if selected)
 
 ### Developer Journey
+
 1. Login to developer portal
 2. Review pending projects
 3. Confirm/adjust pricing
@@ -155,6 +165,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 7. Receive payment upon client acceptance
 
 ### Admin Journey
+
 1. Monitor all projects
 2. Manage users (clients & developers)
 3. Handle disputes

@@ -111,6 +111,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-slate-card border-slate-border text-white"
+                autoComplete="current-password"
                 required
               />
             </div>

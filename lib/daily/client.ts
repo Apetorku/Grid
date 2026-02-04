@@ -1,14 +1,5 @@
-const dailyApiKey = process.env.NEXT_PUBLIC_DAILY_API_KEY!
-
-export interface DailyConfig {
-  apiKey: string
-  domain: string
-}
-
-export const dailyConfig: DailyConfig = {
-  apiKey: dailyApiKey,
-  domain: process.env.NEXT_PUBLIC_DAILY_DOMAIN || '',
-}
+// Using Jitsi Meet - completely free, no API keys required!
+// Meetings are now embedded directly in the website!
 
 export async function createMeeting(projectId: string) {
   try {
@@ -40,7 +31,8 @@ export async function createMeeting(projectId: string) {
 
 export async function joinMeeting(sessionId: string) {
   try {
-    window.location.href = `/api/meetings/join?sessionId=${sessionId}`
+    // Open meeting in same window (embedded)
+    window.location.href = `/meetings/${sessionId}`
   } catch (error) {
     console.error('Join meeting error:', error)
     throw error

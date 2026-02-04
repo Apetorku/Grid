@@ -72,11 +72,23 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes
-  const publicRoutes = ['/', '/login', '/signup', '/auth/callback']
+  const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/about']
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith('/api/auth'))
+  
+  // Allow public assets and static files
+  const publicAssets = [
+    '/manifest.json',
+    '/favicon.svg',
+    '/icon.svg',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/_next',
+    '/images',
+  ]
+  const isPublicAsset = publicAssets.some(asset => pathname.startsWith(asset))
 
   // If not authenticated and trying to access protected route
-  if (!user && !isPublicRoute) {
+  if (!user && !isPublicRoute && !isPublicAsset) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)

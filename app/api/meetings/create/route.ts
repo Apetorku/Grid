@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const DAILY_API_KEY = process.env.DAILY_API_SECRET!
+// Using Jitsi Meet - completely free!
+const JITSI_DOMAIN = 'meet.jit.si'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,63 +16,45 @@ export async function POST(request: NextRequest) {
     }
 
     // Get project details
-    const { data: project } = await supabase
+    const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('*, client_id, developer_id')
+      .select('id, client_id, developer_id, title')
       .eq('id', projectId)
       .single()
 
-    if (!project) {
+    if (projectError || !project) {
+      console.error('Project fetch error:', projectError)
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    const projectData = project as any
-
     // Verify user is part of the project
+    const projectData = project as any
     if (projectData.client_id !== user.id && projectData.developer_id !== user.id) {
+      console.error('Authorization failed - User:', user.id, 'Client:', projectData.client_id, 'Developer:', projectData.developer_id)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Create Daily.co room
-    const roomName = `gridnexus-${projectId}-${Date.now()}`
-    const response = await fetch('https://api.daily.co/v1/rooms', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DAILY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        name: roomName,
-        privacy: 'private',
-        properties: {
-          enable_screenshare: true,
-          enable_chat: true,
-          enable_knocking: false,
-          start_video_off: false,
-          start_audio_off: false,
-          max_participants: 2,
-        },
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!data.url) {
-      throw new Error('Failed to create meeting room')
-    }
+    // Create unique room name for Jitsi
+    const roomName = `GridNexus-${projectId}-${Date.now()}`
+    const roomUrl = `https://${JITSI_DOMAIN}/${roomName}`
 
     // Save session to database
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('screen_sessions')
       .insert({
         project_id: projectId,
         host_id: user.id,
         participant_id: projectData.client_id === user.id ? projectData.developer_id : projectData.client_id,
         daily_room_name: roomName,
-        daily_room_url: data.url,
+        daily_room_url: roomUrl,
       } as any)
       .select()
       .single()
+
+    if (sessionError || !session) {
+      console.error('Failed to create session:', sessionError)
+      return NextResponse.json({ error: 'Failed to save meeting session' }, { status: 500 })
+    }
 
     const sessionData = session as any
 
@@ -82,12 +65,12 @@ export async function POST(request: NextRequest) {
       title: 'Meeting Started',
       message: 'A meeting has been started for your project. Click to join.',
       type: 'info',
-      link: `/api/meetings/join?sessionId=${sessionData?.id}`,
+      link: `/api/meetings/join?sessionId=${sessionData.id}`,
     } as any)
 
     return NextResponse.json({
-      roomUrl: data.url,
-      sessionId: sessionData?.id,
+      roomUrl: roomUrl,
+      sessionId: sessionData.id,
     })
   } catch (error: any) {
     console.error('Meeting creation error:', error)
