@@ -74,7 +74,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             alt="GridNexus Logo"
             width={40}
             height={40}
-            className="object-contain"
+            className="object-contain brightness-0 invert"
           />
           <h2 className="text-2xl font-bold bg-gradient-to-r from-electric-blue to-electric-cyan bg-clip-text text-transparent">
             GridNexus Admin
@@ -137,7 +137,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   alt="GridNexus Logo"
                   width={40}
                   height={40}
-                  className="object-contain"
+                  className="object-contain brightness-0 invert"
                 />
                 <h2 className="text-xl font-bold bg-gradient-to-r from-electric-blue to-electric-cyan bg-clip-text text-transparent">
                   Admin

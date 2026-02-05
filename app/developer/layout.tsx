@@ -100,7 +100,7 @@ export default function DeveloperLayout({ children }: DeveloperLayoutProps) {
                 alt="GridNexus Logo"
                 width={40}
                 height={40}
-                className="w-10 h-auto object-contain"
+                className="w-10 h-auto object-contain brightness-0 invert"
               />
               <span className="text-xl font-bold bg-gradient-to-r from-electric-blue to-electric-cyan bg-clip-text text-transparent">
                 GridNexus <span className="text-sm text-white/70">Dev</span>

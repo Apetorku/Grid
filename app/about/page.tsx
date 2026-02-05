@@ -7,9 +7,9 @@ import { ArrowRight, Shield, Zap, Users, Target } from "lucide-react";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-navy-950 via-navy-900 to-slate-bg">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-border bg-slate-panel/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link
@@ -21,7 +21,7 @@ export default function AboutPage() {
                 alt="GridNexus Logo"
                 width={180}
                 height={50}
-                className="h-12 w-auto"
+                className="h-12 w-auto brightness-0 invert"
                 priority
               />
             </Link>
@@ -47,10 +47,10 @@ export default function AboutPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-electric-blue via-electric-cyan to-electric-light bg-clip-text text-transparent">
             About GridNexus
           </h1>
-          <p className="text-xl text-slate-600 mb-8">
+          <p className="text-xl text-slate-300 mb-8">
             Revolutionizing how clients and developers connect, collaborate, and
             create amazing web solutions
           </p>
@@ -61,25 +61,25 @@ export default function AboutPage() {
       <section className="container mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-4xl font-bold mb-6">Our Brand Story</h2>
-            <p className="text-lg text-slate-600 mb-4">
+            <h2 className="text-4xl font-bold mb-6 text-white">Our Brand Story</h2>
+            <p className="text-lg text-slate-300 mb-4">
               GridNexus was born from a simple idea: to create a marketplace
               where clients can safely commission web development projects
             </p>
-            <p className="text-lg text-slate-600 mb-4">
+            <p className="text-lg text-slate-300 mb-4">
               We recognized a critical gap in the industry—a lack of trust and
               security between clients and developers. That&apos;s why we built
               GridNexus with escrow protection, transparent workflows, and
               real-time collaboration at its core.
             </p>
-            <p className="text-lg text-slate-600 mb-6">
+            <p className="text-lg text-slate-300 mb-6">
               Today, GridNexus is the go-to platform for businesses seeking
               professional web development
             </p>
             <Link href="/signup">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="bg-gradient-to-r from-electric-blue to-electric-cyan hover:from-electric-blue/90 hover:to-electric-cyan/90 shadow-lg shadow-electric-blue/30"
               >
                 Join Our Community
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -99,7 +99,7 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 py-20">
+      <section className="bg-gradient-to-br from-electric-blue via-navy-800 to-electric-cyan py-20">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-white text-center mb-16">
             Our Core Values
@@ -158,7 +158,7 @@ export default function AboutPage() {
 
       {/* Brand Guidelines Section */}
       <section className="container mx-auto px-4 py-20">
-        <h2 className="text-4xl font-bold text-center mb-16">
+        <h2 className="text-4xl font-bold text-center mb-16 text-white">
           Our Professional Standards
         </h2>
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -172,34 +172,34 @@ export default function AboutPage() {
             />
           </div>
           <div>
-            <h3 className="text-3xl font-bold mb-6">Consistent Excellence</h3>
-            <p className="text-lg text-slate-600 mb-4">
+            <h3 className="text-3xl font-bold mb-6 text-white">Consistent Excellence</h3>
+            <p className="text-lg text-slate-300 mb-4">
               Every interaction on GridNexus is designed with purpose and care.
               Our brand guidelines ensure consistency across all platforms and
               touchpoints.
             </p>
             <ul className="space-y-3 mb-8">
               <li className="flex gap-3">
-                <span className="text-blue-600 font-bold">✓</span>
-                <span className="text-slate-600">
+                <span className="text-electric-cyan font-bold">✓</span>
+                <span className="text-slate-300">
                   Professional design standards
                 </span>
               </li>
               <li className="flex gap-3">
-                <span className="text-blue-600 font-bold">✓</span>
-                <span className="text-slate-600">
+                <span className="text-electric-cyan font-bold">✓</span>
+                <span className="text-slate-300">
                   Clear communication principles
                 </span>
               </li>
               <li className="flex gap-3">
-                <span className="text-blue-600 font-bold">✓</span>
-                <span className="text-slate-600">
+                <span className="text-electric-cyan font-bold">✓</span>
+                <span className="text-slate-300">
                   Accessible and inclusive interfaces
                 </span>
               </li>
               <li className="flex gap-3">
-                <span className="text-blue-600 font-bold">✓</span>
-                <span className="text-slate-600">Security-first approach</span>
+                <span className="text-electric-cyan font-bold">✓</span>
+                <span className="text-slate-300">Security-first approach</span>
               </li>
             </ul>
           </div>
@@ -207,28 +207,28 @@ export default function AboutPage() {
       </section>
 
       {/* Digital Ecosystem Section */}
-      <section className="bg-slate-100 py-20">
+      <section className="bg-slate-900 py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16">
+          <h2 className="text-4xl font-bold text-center mb-16 text-white">
             Our Digital Ecosystem
           </h2>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h3 className="text-3xl font-bold mb-6">
+              <h3 className="text-3xl font-bold mb-6 text-white">
                 Complete Platform Suite
               </h3>
-              <p className="text-lg text-slate-600 mb-4">
+              <p className="text-lg text-slate-300 mb-4">
                 GridNexus provides everything needed for successful project
                 delivery:
               </p>
               <ul className="space-y-4 mb-8">
                 <li className="flex gap-4">
-                  <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold">
+                  <div className="h-8 w-8 rounded-full bg-electric-blue text-white flex items-center justify-center flex-shrink-0 font-bold">
                     1
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">Client Portal</h4>
-                    <p className="text-slate-600">
+                    <h4 className="font-bold text-white">Client Portal</h4>
+                    <p className="text-slate-300">
                       Submit projects, track progress, manage payments
                     </p>
                   </div>
@@ -250,7 +250,7 @@ export default function AboutPage() {
 
       {/* CTA Section */}
       <section className="relative overflow-hidden py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-electric-blue via-navy-800 to-electric-cyan"></div>
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative container mx-auto px-4 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
@@ -264,7 +264,7 @@ export default function AboutPage() {
             <Link href="/signup">
               <Button
                 size="lg"
-                className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-10 py-6 h-auto font-semibold"
+                className="bg-white text-electric-blue hover:bg-blue-50 text-lg px-10 py-6 h-auto font-semibold"
               >
                 Get Started Now
               </Button>
@@ -273,7 +273,7 @@ export default function AboutPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-white text-blue hover:bg-white/10 text-lg px-10 py-6 h-auto font-semibold"
+                className="border-2 border-white text-white hover:bg-white/10 text-lg px-10 py-6 h-auto font-semibold"
               >
                 Back to Home
               </Button>

@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -61,6 +62,19 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-bg to-navy-950 p-4">
+      <Link
+        href="/"
+        className="fixed top-4 left-4 z-50"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white hover:text-electric-blue hover:bg-white/10"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Home
+        </Button>
+      </Link>
       <Card className="w-full max-w-md bg-slate-panel border-slate-border shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center text-white">

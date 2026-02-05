@@ -62,7 +62,7 @@ export default function HomePage() {
                 alt="GridNexus Logo"
                 width={180}
                 height={50}
-                className="h-12 w-auto"
+                className="h-12 w-auto brightness-0 invert"
                 priority
               />
             </Link>

@@ -107,7 +107,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 alt="GridNexus Logo"
                 width={40}
                 height={40}
-                className="w-10 h-auto object-contain"
+                className="w-10 h-auto object-contain brightness-0 invert"
               />
               <span className="text-xl font-bold bg-gradient-to-r from-electric-blue via-electric-cyan to-electric-light bg-clip-text text-transparent">
                 GridNexus
@@ -153,7 +153,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   alt="GridNexus Logo"
                   width={32}
                   height={32}
-                  className="object-contain"
+                  className="object-contain brightness-0 invert"
                 />
                 <h2 className="text-lg font-bold bg-gradient-to-r from-electric-blue to-electric-cyan bg-clip-text text-transparent">
                   Menu
