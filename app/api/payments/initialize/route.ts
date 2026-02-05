@@ -5,7 +5,7 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!
 
 export async function POST(request: NextRequest) {
   try {
-    const { projectId, amount } = await request.json()
+    const { projectId, amount, paymentType = 'initial' } = await request.json()
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -13,6 +13,13 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Calculate payment amount based on type
+    const paymentAmount = paymentType === 'initial' 
+      ? amount * 0.6  // 60% for initial payment
+      : paymentType === 'final'
+      ? amount * 0.4  // 40% for final payment
+      : amount        // 100% for full payment (legacy)
 
     // Get project details
     const { data: project } = await supabase
@@ -36,12 +43,14 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         email: user.email,
-        amount: amount * 100, // Convert to pesewas (GHS cents)
+        amount: Math.round(paymentAmount * 100), // Convert to pesewas (GHS cents)
         currency: 'GHS',
         metadata: {
           project_id: projectId,
           client_id: user.id,
           developer_id: projectData.developer_id,
+          payment_type: paymentType,
+          full_amount: amount,
         },
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/verify`,
       }),
@@ -60,11 +69,14 @@ export async function POST(request: NextRequest) {
       project_id: projectId,
       client_id: user.id,
       developer_id: projectData.developer_id,
-      amount: amount,
+      amount: paymentAmount,
+      payment_type: paymentType,
       status: 'pending',
       paystack_reference: data.data.reference,
       metadata: {
         access_code: data.data.access_code,
+        full_project_amount: amount,
+        payment_percentage: paymentType === 'initial' ? 60 : paymentType === 'final' ? 40 : 100,
       },
     } as any)
     .select()

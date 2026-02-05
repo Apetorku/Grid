@@ -64,6 +64,8 @@ export default function ProjectDetailsPage() {
   );
   const [deliverables, setDeliverables] = useState<ProjectDeliverable[]>([]);
   const [paymentExists, setPaymentExists] = useState(false);
+  const [initialPaymentExists, setInitialPaymentExists] = useState(false);
+  const [finalPaymentExists, setFinalPaymentExists] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -175,18 +177,39 @@ export default function ProjectDetailsPage() {
   const checkPaymentStatus = async () => {
     if (!params.id || Array.isArray(params.id)) return;
 
-    const { data, error } = await supabase
+    // Check for initial payment (60%)
+    const { data: initialData } = await supabase
       .from("payments")
       .select("*")
       .eq("project_id", params.id)
+      .eq("payment_type", "initial")
       .eq("status", "escrowed")
-      .single();
+      .maybeSingle();
 
-    if (data && !error) {
-      setPaymentExists(true);
-    } else {
-      setPaymentExists(false);
-    }
+    setInitialPaymentExists(!!initialData);
+
+    // Check for final payment (40%)
+    const { data: finalData } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("project_id", params.id)
+      .eq("payment_type", "final")
+      .eq("status", "escrowed")
+      .maybeSingle();
+
+    setFinalPaymentExists(!!finalData);
+
+    // Check for full payment (legacy - 100%)
+    const { data: fullData } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("project_id", params.id)
+      .eq("payment_type", "full")
+      .eq("status", "escrowed")
+      .maybeSingle();
+
+    // Set paymentExists if any payment exists
+    setPaymentExists(!!(initialData || fullData));
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -332,7 +355,7 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (paymentType: 'initial' | 'final' = 'initial') => {
     if (!project) return;
 
     setPaymentLoading(true);
@@ -343,6 +366,7 @@ export default function ProjectDetailsPage() {
         body: JSON.stringify({
           projectId: project.id,
           amount: project.final_cost || project.estimated_cost,
+          paymentType: paymentType,
         }),
       });
 
@@ -379,14 +403,31 @@ export default function ProjectDetailsPage() {
   const acceptDelivery = async () => {
     if (!project) return;
 
+    // Check if both payments are made
+    if (!initialPaymentExists || !finalPaymentExists) {
+      toast.error("Both initial and final payments must be completed before approving the project.");
+      return;
+    }
+
     setAcceptingDelivery(true);
     const result = await (supabase.from("projects") as any)
       .update({ status: "delivered" })
       .eq("id", project.id);
 
     if (!result.error) {
-      toast.success("Project accepted! Payment released.");
+      // Release both payments to developer
+      await (supabase
+        .from("payments") as any)
+        .update({ 
+          status: "released",
+          release_date: new Date().toISOString()
+        })
+        .eq("project_id", project.id)
+        .in("payment_type", ["initial", "final"]);
+      
+      toast.success("Project accepted! Both payments released to developer.");
       fetchProject();
+      checkPaymentStatus();
     } else {
       toast.error("Failed to accept delivery");
     }
@@ -648,11 +689,36 @@ export default function ProjectDetailsPage() {
                     </div>
                   )}
 
-                  {/* Show Pay Now button only if approved and not paid */}
-                  {project.status === "approved" && !paymentExists && (
+                  {/* Payment Progress Display */}
+                  {project.final_cost && (project.status === "approved" || project.status === "in_progress" || project.status === "completed") && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Initial Payment (60%)</span>
+                        <span className={initialPaymentExists ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                          {initialPaymentExists ? "✓ Paid" : "Pending"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatCurrency((project.final_cost || 0) * 0.6)}
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm mt-3">
+                        <span className="text-muted-foreground">Final Payment (40%)</span>
+                        <span className={finalPaymentExists ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                          {finalPaymentExists ? "✓ Paid" : project.status === "completed" ? "Due Now" : "On Completion"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatCurrency((project.final_cost || 0) * 0.4)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pay Initial 60% button - only if approved and not paid */}
+                  {project.status === "approved" && !initialPaymentExists && (
                     <Button
                       className="w-full"
-                      onClick={handlePayment}
+                      onClick={() => handlePayment('initial')}
                       disabled={paymentLoading}
                     >
                       {paymentLoading ? (
@@ -661,13 +727,31 @@ export default function ProjectDetailsPage() {
                           Processing...
                         </>
                       ) : (
-                        "Pay Now"
+                        `Pay Initial 60% (${formatCurrency((project.final_cost || project.estimated_cost || 0) * 0.6)})`
                       )}
                     </Button>
                   )}
 
-                  {/* Show Paid status with receipt if payment exists */}
-                  {project.status === "approved" && paymentExists && (
+                  {/* Pay Final 40% button - only if completed and initial paid but final not paid */}
+                  {project.status === "completed" && initialPaymentExists && !finalPaymentExists && (
+                    <Button
+                      className="w-full"
+                      onClick={() => handlePayment('final')}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        `Pay Final 40% (${formatCurrency((project.final_cost || project.estimated_cost || 0) * 0.4)})`
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Show Paid status with receipt if initial payment exists */}
+                  {project.status === "approved" && initialPaymentExists && (
                     <div className="space-y-3">
                       <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-sm font-medium text-green-800">
@@ -701,19 +785,27 @@ export default function ProjectDetailsPage() {
                   {/* Show payment status for in_progress, completed, delivered */}
                   {["in_progress", "completed", "delivered"].includes(
                     project.status,
-                  ) && (
+                  ) && (initialPaymentExists || finalPaymentExists) && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm font-medium text-green-800">
-                        ✓ Payment Secured
+                        {initialPaymentExists && finalPaymentExists 
+                          ? "✓ All Payments Secured" 
+                          : initialPaymentExists 
+                          ? "✓ Initial Payment Secured (60%)"
+                          : "✓ Payment Secured"}
                       </p>
                       <p className="text-xs text-green-600 mt-1">
-                        Funds are held in escrow until project completion
+                        {initialPaymentExists && finalPaymentExists
+                          ? "All funds held in escrow until you approve the project"
+                          : initialPaymentExists
+                          ? "Initial payment held in escrow. Final 40% due on completion."
+                          : "Funds are held in escrow until project completion"}
                       </p>
                     </div>
                   )}
 
-                  {/* Show accept delivery button when completed */}
-                  {project.status === "completed" && (
+                  {/* Show accept delivery button when completed and both payments made */}
+                  {project.status === "completed" && finalPaymentExists && (
                     <Button
                       className="w-full"
                       onClick={acceptDelivery}
@@ -727,7 +819,7 @@ export default function ProjectDetailsPage() {
                       ) : (
                         <>
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Accept & Release Payment
+                          Accept & Release Payments
                         </>
                       )}
                     </Button>
@@ -740,7 +832,7 @@ export default function ProjectDetailsPage() {
                         ✓ Project Delivered
                       </p>
                       <p className="text-xs text-blue-600 mt-1">
-                        Payment has been released to developer
+                        All payments (60% + 40%) have been released to developer
                       </p>
                     </div>
                   )}

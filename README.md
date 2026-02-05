@@ -9,7 +9,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - **Client Portal**: Submit project requirements, get automated quotes, book appointments
 - **Developer Portal**: Manage projects, communicate with clients, deliver work
 - **Admin Dashboard**: Platform oversight, user management, analytics
-- **Secure Escrow**: Paystack-powered payment protection
+- **Secure Escrow**: Paystack-powered payment protection with 60/40 split payments
 - **Real-time Communication**: Live chat and notifications
 - **SMS & Email Notifications**: Arkesel SMS alerts (Ghana) + Resend email notifications for clients
 - **Screen Sharing**: Jitsi Meet integration (Free!) for remote presentations

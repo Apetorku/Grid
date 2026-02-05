@@ -104,12 +104,15 @@ export interface Appointment {
 }
 
 // Payment Types
+export type PaymentType = 'full' | 'initial' | 'final';
+
 export interface Payment {
   id: string;
   project_id: string;
   client_id: string;
   developer_id: string;
   amount: number;
+  payment_type: PaymentType; // 'full' (100%), 'initial' (60%), or 'final' (40%)
   status: PaymentStatus;
   paystack_reference?: string;
   paystack_transaction_id?: string;

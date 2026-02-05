@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     console.log('Found payment record:', existingPayment)
 
     const projectId = (existingPayment as any).project_id
+    const paymentType = (existingPayment as any).payment_type || 'full'
 
     // Update payment record
     const { error: updateError } = await (supabase
@@ -63,21 +64,31 @@ export async function GET(request: NextRequest) {
       console.error('Error updating payment:', updateError)
     }
 
-    console.log('Payment updated, project_id:', projectId)
+    console.log('Payment updated, project_id:', projectId, 'payment_type:', paymentType)
 
     if (projectId) {
-      // Update project status
-      await (supabase
-        .from('projects') as any)
-        .update({ status: 'in_progress' })
-        .eq('id', projectId)
+      // Update project status based on payment type
+      // Initial payment (60%): Start project
+      // Final payment (40%): Keep as completed, ready for approval
+      if (paymentType === 'initial' || paymentType === 'full') {
+        await (supabase
+          .from('projects') as any)
+          .update({ status: 'in_progress' })
+          .eq('id', projectId)
+      }
 
       // Create notification for developer
       if ((existingPayment as any).developer_id) {
+        const devMessage = paymentType === 'initial' 
+          ? 'Initial payment (60%) received. You can now start working on the project.'
+          : paymentType === 'final'
+          ? 'Final payment (40%) received. Project ready for client approval.'
+          : 'Payment received. You can now start working on the project.'
+        
         const { error: devNotifError } = await supabase.from('notifications').insert({
           user_id: (existingPayment as any).developer_id,
-          title: 'New Project Payment Received',
-          message: 'A client has paid for a project. You can now start working on it.',
+          title: paymentType === 'final' ? 'Final Payment Received' : 'Payment Received',
+          message: devMessage,
           type: 'success',
           link: `/developer/projects/${projectId}`,
         } as any)
@@ -88,10 +99,16 @@ export async function GET(request: NextRequest) {
 
       // Create notification for client
       if ((existingPayment as any).client_id) {
+        const clientMessage = paymentType === 'initial'
+          ? 'Your initial payment (60%) has been secured in escrow. The developer will start working on your project.'
+          : paymentType === 'final'
+          ? 'Your final payment (40%) has been secured in escrow. Please review and approve the completed work.'
+          : 'Your payment has been secured in escrow. The developer will start working on your project.'
+        
         const { error: clientNotifError } = await supabase.from('notifications').insert({
           user_id: (existingPayment as any).client_id,
-          title: 'Payment Successful',
-          message: 'Your payment has been secured in escrow. The developer will start working on your project.',
+          title: paymentType === 'final' ? 'Final Payment Successful' : 'Payment Successful',
+          message: clientMessage,
           type: 'success',
           link: `/client/projects/${projectId}`,
         } as any)

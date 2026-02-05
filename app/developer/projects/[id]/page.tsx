@@ -472,7 +472,20 @@ export default function DeveloperProjectPage() {
       .eq("id", params.id);
 
     if (!error) {
-      toast.success("Project submitted for review!");
+      // Create notification for client to pay final 40%
+      const { error: notifError } = await supabase.from("notifications").insert({
+        user_id: project?.client_id,
+        title: "Project Completed - Final Payment Required",
+        message: `The developer has completed your project "${project?.title}". Please pay the remaining 40% to review and approve the work.`,
+        type: "info",
+        link: `/client/projects/${params.id}`,
+      } as any);
+      
+      if (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
+      
+      toast.success("Project submitted! Client will be notified to pay the final 40%.");
       fetchProject();
     }
   };

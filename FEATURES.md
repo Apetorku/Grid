@@ -56,6 +56,10 @@
 
 ### 💰 **Payment System (Paystack)**
 
+- ✅ **Split Payment System (60% / 40%)**
+  - 60% initial payment before work starts
+  - 40% final payment on completion
+  - Both held in escrow until client approves
 - ✅ Secure payment initialization
 - ✅ Escrow functionality
 - ✅ Payment verification
@@ -63,6 +67,7 @@
 - ✅ Automatic payment release on project acceptance
 - ✅ Transaction history
 - ✅ Multiple currency support (GHS primary)
+- ✅ Mobile Money & Card payments
 
 ### 📹 **Screen Sharing & Meetings (Jitsi Meet - Free!)**
 
