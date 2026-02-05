@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { arkeselClient } from '@/lib/arkesel/client'
+import { resendClient } from '@/lib/resend/client'
 
 // Using Jitsi Meet - completely free!
 const JITSI_DOMAIN = 'meet.jit.si'
@@ -69,23 +70,37 @@ export async function POST(request: NextRequest) {
       link: `/api/meetings/join?sessionId=${sessionData.id}`,
     } as any)
 
-    // Send SMS if the other user is a client
+    // Send SMS and Email if the other user is a client
     try {
       const { data: otherUser } = await (supabase
         .from('users')
-        .select('phone, role')
+        .select('phone, email, role')
         .eq('id', otherUserId)
         .single() as any)
       
-      if (otherUser?.phone && otherUser?.role === 'client') {
-        arkeselClient.sendNotification(
-          otherUser.phone,
-          'Meeting Started',
-          `A meeting has been started for your project: ${projectData.title}. Join now at: ${process.env.NEXT_PUBLIC_APP_URL}/meetings/${sessionData.id}`
-        ).catch(err => console.error('SMS failed:', err))
+      if (otherUser?.role === 'client') {
+        const meetingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/meetings/${sessionData.id}`
+        const message = `A meeting has been started for your project: ${projectData.title}. Join now!`
+
+        if (otherUser.phone) {
+          arkeselClient.sendNotification(
+            otherUser.phone,
+            'Meeting Started',
+            `${message} ${meetingUrl}`
+          ).catch(err => console.error('SMS failed:', err))
+        }
+
+        if (otherUser.email) {
+          resendClient.sendNotificationEmail(
+            otherUser.email,
+            'Meeting Started',
+            message,
+            meetingUrl
+          ).catch(err => console.error('Email failed:', err))
+        }
       }
-    } catch (smsError) {
-      console.error('Failed to send meeting SMS:', smsError)
+    } catch (notifError) {
+      console.error('Failed to send meeting notifications:', notifError)
     }
 
     return NextResponse.json({

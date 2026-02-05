@@ -11,7 +11,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - **Admin Dashboard**: Platform oversight, user management, analytics
 - **Secure Escrow**: Paystack-powered payment protection
 - **Real-time Communication**: Live chat and notifications
-- **SMS Notifications**: Arkesel-powered SMS alerts for clients (Ghana)
+- **SMS & Email Notifications**: Arkesel SMS alerts (Ghana) + Resend email notifications for clients
 - **Screen Sharing**: Jitsi Meet integration (Free!) for remote presentations
 - **Automated Workflow**: From booking to delivery with smart status tracking
 
@@ -31,6 +31,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - **Authentication**: Supabase Auth + Google OAuth
 - **Payment**: Paystack
 - **SMS**: Arkesel (Ghana)
+- **Email**: Resend
 - **Real-time**: Supabase Realtime + Socket.io
 - **Screen Sharing**: Daily.co
 - **File Storage**: Supabase Storage
@@ -43,6 +44,7 @@ A comprehensive platform that streamlines the entire web development service lif
 - Supabase account
 - Paystack account
 - Arkesel account (optional, for SMS notifications)
+- Resend account (optional, for email notifications)
 - Daily.co account
 - Google OAuth credentials
 
@@ -67,7 +69,9 @@ A comprehensive platform that streamlines the entire web development service lif
    cp .env.example .env.local
    ```
 
-   Fill in your API keys and credentials
+   Fill in your API keys and credentials. 
+   
+   **Note**: Email notifications work immediately with `onboarding@resend.dev` - no domain required!
 
 4. **Run database migrations**
 

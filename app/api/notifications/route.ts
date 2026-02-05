@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { arkeselClient } from '@/lib/arkesel/client'
+import { resendClient } from '@/lib/resend/client'
 
 export async function GET(_request: Request) {
   try {
@@ -48,25 +49,38 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    // Send SMS to client if they have a phone number
+    // Send SMS and Email to client if they have contact info
     try {
       const { data: userData } = await (supabase
         .from('users')
-        .select('phone, role')
+        .select('phone, email, role')
         .eq('id', userId)
         .single() as any)
 
-      if (userData?.phone && userData?.role === 'client') {
-        // Send SMS notification asynchronously (don't wait for it)
-        arkeselClient.sendNotification(
-          userData.phone,
-          title,
-          message
-        ).catch(err => console.error('SMS failed:', err))
+      if (userData?.role === 'client') {
+        // Send SMS notification asynchronously
+        if (userData.phone) {
+          arkeselClient.sendNotification(
+            userData.phone,
+            title,
+            message
+          ).catch(err => console.error('SMS failed:', err))
+        }
+
+        // Send Email notification asynchronously
+        if (userData.email) {
+          const emailLink = link ? `${process.env.NEXT_PUBLIC_APP_URL}${link}` : undefined
+          resendClient.sendNotificationEmail(
+            userData.email,
+            title,
+            message,
+            emailLink
+          ).catch(err => console.error('Email failed:', err))
+        }
       }
-    } catch (smsError) {
+    } catch (notifError) {
       // Log but don't fail the notification creation
-      console.error('SMS notification error:', smsError)
+      console.error('SMS/Email notification error:', notifError)
     }
 
     return NextResponse.json({ notification: data })
