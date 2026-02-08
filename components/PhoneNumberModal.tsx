@@ -83,49 +83,49 @@ export default function PhoneNumberModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md bg-slate-panel border-slate-border">
+      <DialogContent className="w-[95vw] max-w-md sm:max-w-md bg-slate-panel border-slate-border p-4 sm:p-6">
         <DialogHeader>
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-electric-blue to-electric-cyan flex items-center justify-center shadow-lg shadow-electric-blue/30">
-            <Bell className="h-8 w-8 text-white" />
+          <div className="mx-auto mb-3 sm:mb-4 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-electric-blue to-electric-cyan flex items-center justify-center shadow-lg shadow-electric-blue/30">
+            <Bell className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
-          <DialogTitle className="text-2xl text-center text-white">
+          <DialogTitle className="text-xl sm:text-2xl text-center text-white">
             📱 Stay Updated with SMS
           </DialogTitle>
-          <DialogDescription className="text-center text-slate-300 text-base">
+          <DialogDescription className="text-center text-slate-300 text-sm sm:text-base px-2">
             Add your phone number to receive instant SMS notifications for:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-4">
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="text-green-400">✓</span>
+        <div className="space-y-2 sm:space-y-3 py-3 sm:py-4 px-2">
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-300">
+            <span className="text-green-400 text-lg">✓</span>
             <span>Payment confirmations</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="text-green-400">✓</span>
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-300">
+            <span className="text-green-400 text-lg">✓</span>
             <span>Project updates</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="text-green-400">✓</span>
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-300">
+            <span className="text-green-400 text-lg">✓</span>
             <span>Meeting invitations</span>
           </div>
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="text-green-400">✓</span>
+          <div className="flex items-center gap-2 text-sm sm:text-base text-slate-300">
+            <span className="text-green-400 text-lg">✓</span>
             <span>Important notifications</span>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-white font-semibold">
+          <Label htmlFor="phone" className="text-white font-semibold text-sm sm:text-base">
             Phone Number
           </Label>
           <Input
             id="phone"
             type="tel"
-            placeholder="0241234567 or +233241234567"
+            placeholder="0241234567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="h-12 text-base border-slate-border bg-slate-card text-white"
+            className="h-11 sm:h-12 text-sm sm:text-base border-slate-border bg-slate-card text-white"
             autoFocus
           />
           <p className="text-xs text-slate-400">
@@ -133,18 +133,18 @@ export default function PhoneNumberModal() {
           </p>
         </div>
 
-        <DialogFooter className="sm:justify-between gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
           <Button
             variant="ghost"
             onClick={handleSkip}
-            className="text-slate-400 hover:text-white"
+            className="w-full sm:w-auto text-slate-400 hover:text-white order-2 sm:order-1"
           >
             Skip for now
           </Button>
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-gradient-to-r from-electric-blue to-electric-cyan hover:from-electric-blue/90 hover:to-electric-cyan/90 text-white font-semibold shadow-lg shadow-electric-blue/30"
+            className="w-full sm:w-auto bg-gradient-to-r from-electric-blue to-electric-cyan hover:from-electric-blue/90 hover:to-electric-cyan/90 text-white font-semibold shadow-lg shadow-electric-blue/30 order-1 sm:order-2"
           >
             {loading ? "Saving..." : "Save & Continue"}
           </Button>

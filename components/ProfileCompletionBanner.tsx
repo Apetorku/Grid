@@ -68,35 +68,35 @@ export default function ProfileCompletionBanner() {
   if (!show || dismissed) return null;
 
   return (
-    <div className="bg-gradient-to-r from-electric-blue to-electric-cyan p-4 shadow-lg relative">
-      <div className="container mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-            <Bell className="h-5 w-5 text-white" />
+    <div className="bg-gradient-to-r from-electric-blue to-electric-cyan p-3 sm:p-4 shadow-lg relative">
+      <div className="container mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0">
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </div>
-          <div className="flex-1">
-            <p className="text-white font-semibold text-sm md:text-base">
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-xs sm:text-sm md:text-base">
               📱 Complete your profile to receive SMS updates
             </p>
-            <p className="text-white/90 text-xs md:text-sm">
+            <p className="text-white/90 text-xs sm:text-sm">
               Stay informed about payments, meetings, and project updates via SMS
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           <Button
             onClick={handleAddPhone}
             size="sm"
-            className="bg-white text-electric-blue hover:bg-white/90 font-semibold shadow-lg"
+            className="bg-white text-electric-blue hover:bg-white/90 font-semibold shadow-lg text-xs sm:text-sm px-3 sm:px-4 h-8 sm:h-9"
           >
             Add Phone Number
           </Button>
           <button
             onClick={handleDismiss}
-            className="h-8 w-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="h-8 w-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Dismiss"
           >
-            <X className="h-5 w-5 text-white" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </button>
         </div>
       </div>
