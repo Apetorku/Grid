@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ export default function MeetingRoomPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [meetingData, setMeetingData] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const sessionId = params.sessionId as string;
 
   useEffect(() => {
@@ -21,6 +23,25 @@ export default function MeetingRoomPage() {
       return;
     }
     loadMeetingData();
+
+    // Listen for Jitsi meeting end events
+    const handleMessage = (event: MessageEvent) => {
+      // Check if message is from Jitsi
+      if (event.origin !== "https://meet.jit.si") return;
+
+      // Jitsi sends various events - we want to catch hangup/leave events
+      if (event.data?.type === "video-conference-left" || 
+          event.data?.event === "readyToClose") {
+        console.log("Meeting ended, redirecting to dashboard");
+        handleLeaveMeeting();
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, [sessionId]);
 
   const loadMeetingData = async () => {
@@ -28,6 +49,26 @@ export default function MeetingRoomPage() {
       const supabase = createClient();
 
       console.log("Loading meeting data for session:", sessionId);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError("Please log in to join meeting");
+        setLoading(false);
+        return;
+      }
+
+      // Get user role
+      const { data: userData } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (userData) {
+        setUserRole((userData as any).role || "");
+      }
 
       const { data: session, error: sessionError } = await supabase
         .from("screen_sessions")
@@ -56,6 +97,17 @@ export default function MeetingRoomPage() {
     }
   };
 
+  const handleLeaveMeeting = () => {
+    // Redirect to appropriate dashboard based on user role
+    if (userRole === "developer") {
+      router.push("/developer");
+    } else if (userRole === "client") {
+      router.push("/client");
+    } else {
+      router.push("/");
+    }
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 flex items-center justify-center p-4">
@@ -67,7 +119,7 @@ export default function MeetingRoomPage() {
             Meeting Not Found
           </h2>
           <p className="text-slate-400 mb-6">{error}</p>
-          <Button onClick={() => router.back()} variant="outline">
+          <Button onClick={handleLeaveMeeting} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
           </Button>
@@ -85,7 +137,7 @@ export default function MeetingRoomPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.back()}
+              onClick={handleLeaveMeeting}
               className="border-slate-border text-white hover:border-electric-blue"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -136,6 +188,7 @@ export default function MeetingRoomPage() {
       <div className="absolute top-16 left-0 right-0 bottom-0">
         {meetingData && (
           <iframe
+            ref={iframeRef}
             src={
               meetingData.daily_room_url ||
               `https://meet.jit.si/${meetingData.daily_room_name}`
